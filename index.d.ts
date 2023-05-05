@@ -5,26 +5,26 @@ import NodeCache from 'node-cache'
 
 export interface FastifyAuth0VerifyOptions {
   /**
-   * The Auth0 tenant domain. It enables verification of RS256 encoded tokens.
-   * It is also used to verify the token issuer (iss).
-   * Either provide a domain or the full URL, including the trailing slash (https://domain.com/).
+   * JSON Web Key Set url (JWKS).
+   * The public endpoint returning the set of keys that contain amongst other things the keys needed to verify JSON Web Tokens (JWT)
+   * Eg. https://domain.com/.well-known/jwks.json
    */
-  readonly domain?: string
+  readonly jwksUrl?: string
   /**
-   * The Auth0 audience (aud), usually the API name.
-   * If you provide the value true, the domain will be also used as audience.
-   * Accepts a string value, or an array of strings for multiple providers.
+   * The intended consumer of the token.
+   * This is typically a set of endpoints at which the token can be used.
+   * If you provide the value `true`, the domain will be also used as audience.
+   * Accepts a string value, or an array of strings for multiple audiences.
    */
   readonly audience?: string | readonly string[] | boolean
   /**
-   * The Auth0 issuer (iss), usually the API name.
+   * The domain of the system which is issuing OAuth access tokens.
    * By default the domain will be also used as audience.
-   * Accepts a string value, or an array of strings or regexes for multiple
-   * issuers.
+   * Accepts a string value, or an array of strings for multiple issuers.
    */
   readonly issuer?: string | RegExp | (RegExp | string)[]
   /**
-   * The Auth0 client secret. It enables verification of HS256 encoded JWT tokens.
+   * The OAuth client secret. It enables verification of HS256 encoded JWT tokens.
    */
   readonly secret?: string
   /**
@@ -58,7 +58,7 @@ export interface FastifyAuth0VerifyOptions {
   readonly formatUser?: (payload: SignPayloadType) => UserType
 }
 
-export interface Auth0Verify extends Pick<FastifyAuth0VerifyOptions, 'domain' | 'audience' | 'secret'> {
+export interface Auth0Verify extends Pick<FastifyAuth0VerifyOptions, 'jwksUrl' | 'audience' | 'secret'> {
   readonly verify: FastifyAuth0VerifyOptions & {
     readonly algorithms: readonly string[]
     readonly audience?: string | readonly string[]

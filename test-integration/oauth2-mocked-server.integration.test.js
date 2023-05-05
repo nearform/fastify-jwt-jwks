@@ -1,23 +1,25 @@
-require('dotenv').config()
 const Fastify = require('fastify')
+const { OAuth2Server } = require('oauth2-mock-server')
 const fetch = require('cross-fetch')
 
-if (
-  !process.env.AUTH0_DOMAIN ||
-  !process.env.AUTH0_CLIENT_ID ||
-  !process.env.AUTH0_CLIENT_SECRET ||
-  !process.env.AUTH0_API_AUDIENCE
-) {
-  throw new Error('Integration tests needs a set of environment variables to be set')
+async function buildOAuthServer() {
+  const server = new OAuth2Server()
+
+  // Generate a new RSA key and add it to the keystore
+  await server.issuer.keys.generate('RS256')
+
+  // Start the server
+  await server.start(8080, 'localhost')
+  return server
 }
 
-async function buildServer() {
+async function buildServer({ oAuthServerUrl }) {
   const server = Fastify()
 
   // Setup fastify-auth0-verify
   await server.register(require('../'), {
-    domain: process.env.AUTH0_DOMAIN,
-    secret: process.env.AUTH0_CLIENT_SECRET
+    jwksUrl: `${oAuthServerUrl}/jwks`,
+    issuer: oAuthServerUrl
   })
 
   // Setup auth0 protected route
@@ -34,14 +36,19 @@ async function buildServer() {
   return server
 }
 
-describe('Authentication against Auth0', () => {
+describe('Authentication against oauth2 mocked server', () => {
   let server
+  let OAuthServer
 
   beforeAll(async function () {
-    server = await buildServer()
+    OAuthServer = await buildOAuthServer()
+    server = await buildServer({ oAuthServerUrl: OAuthServer.issuer.url })
   })
 
-  afterAll(() => server.close())
+  afterAll(async () => {
+    server.close()
+    await OAuthServer.stop()
+  })
 
   it('Protects protected routes', async () => {
     const publicResponse = await server.inject('/public')
@@ -75,19 +82,20 @@ describe('Authentication against Auth0', () => {
   })
 
   it('Returns protected route when expected auth header is provided', async () => {
-    const authResponse = await fetch(`https://${process.env.AUTH0_DOMAIN}/oauth/token`, {
+    if (process.version.startsWith('v14')) {
+      console.log('Skipping test on v14')
+      return
+    }
+
+    const authResponse = await fetch(`${OAuthServer.issuer.url}/token`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        client_id: process.env.AUTH0_CLIENT_ID,
-        client_secret: process.env.AUTH0_CLIENT_SECRET,
-        audience: process.env.AUTH0_API_AUDIENCE,
         grant_type: 'client_credentials'
       })
     })
 
     const { token_type: tokenType, access_token: accessToken } = await authResponse.json()
-
     const protectedResponse = await server.inject({
       method: 'GET',
       url: '/protected',
@@ -95,6 +103,7 @@ describe('Authentication against Auth0', () => {
         Authorization: `${tokenType} ${accessToken}`
       }
     })
+
     expect(protectedResponse.statusCode).toEqual(200)
     expect(protectedResponse.json()).toEqual({ route: 'Protected route' })
   })

@@ -205,8 +205,8 @@ async function buildServer(options) {
 }
 
 describe('Options parsing', function () {
-  it('should enable RS256 when the domain is present', async function () {
-    const server = await buildServer({ domain: 'localhost' })
+  it('should enable RS256 when jwksUrl is present', async function () {
+    const server = await buildServer({ jwksUrl: 'https://localhost/.well-known/jwks.json' })
 
     expect(server.auth0Verify.verify.algorithms).toEqual(['RS256'])
 
@@ -222,15 +222,15 @@ describe('Options parsing', function () {
   })
 
   it('should enable both algorithms is both options are present', async function () {
-    const server = await buildServer({ domain: 'http://localhost', secret: 'secret' })
+    const server = await buildServer({ jwksUrl: 'https://localhost/.well-known/jwks.json', secret: 'secret' })
 
     expect(server.auth0Verify.verify.algorithms).toEqual(['RS256', 'HS256'])
 
     server.close()
   })
 
-  it('should complain if neither domain or secret are present', async function () {
-    await expect(buildServer()).rejects.toThrow('Please provide at least one of the "domain" or "secret" options.')
+  it('should complain if neither jwksUrl or secret are present', async function () {
+    await expect(buildServer()).rejects.toThrow('Please provide at least one of the "jwksUrl" or "secret" options.')
   })
 
   it('should complain if forbidden options are present', async function () {
@@ -442,7 +442,7 @@ describe('HS256 JWT token validation', function () {
 
   it('should validate the issuer', async function () {
     await server.close()
-    server = await buildServer({ domain: 'localhost', secret: 'secret' })
+    server = await buildServer({ jwksUrl: 'localhost', secret: 'secret' })
 
     const response = await server.inject({
       method: 'GET',
@@ -461,7 +461,7 @@ describe('HS256 JWT token validation', function () {
 
   it('should validate provided issuer', async function () {
     await server.close()
-    server = await buildServer({ domain: 'localhost', secret: 'secret', issuer: 'foo' })
+    server = await buildServer({ jwksUrl: 'localhost', secret: 'secret', issuer: 'foo' })
 
     const response = await server.inject({
       method: 'GET',
@@ -480,7 +480,7 @@ describe('HS256 JWT token validation', function () {
 
   it('should validate multiple issuers', async function () {
     await server.close()
-    server = await buildServer({ domain: 'localhost', secret: 'secret', issuer: ['bar', 'foo', 'blah'] })
+    server = await buildServer({ jwksUrl: 'localhost', secret: 'secret', issuer: ['bar', 'foo', 'blah'] })
 
     const response = await server.inject({
       method: 'GET',
@@ -511,9 +511,9 @@ describe('HS256 JWT token validation', function () {
     expect(response.json()).toEqual({ sub: '1234567890', name: 'John Doe', admin: true, aud: 'foo' })
   })
 
-  it('should validate the audience using the domain', async function () {
+  it('should validate the audience using the jwksUrl', async function () {
     await server.close()
-    server = await buildServer({ domain: 'localhost', audience: true, secret: 'secret' })
+    server = await buildServer({ jwksUrl: 'localhost', audience: true, secret: 'secret' })
 
     const response = await server.inject({
       method: 'GET',
@@ -553,14 +553,13 @@ describe('RS256 JWT token validation', function () {
   let server
 
   beforeEach(async function () {
-    server = await buildServer({ domain: 'https://localhost/' })
+    server = await buildServer({ jwksUrl: 'https://localhost/.well-known/jwks.json' })
   })
 
   afterEach(() => server.close())
 
   beforeEach(function () {
     nock.disableNetConnect()
-
     nock('https://localhost/').get('/.well-known/jwks.json').reply(200, jwks)
   })
 
@@ -585,9 +584,12 @@ describe('RS256 JWT token validation', function () {
     })
   })
 
-  it('should make the complete token informations available through request.user', async function () {
+  it('should make the complete token information available through request.user', async function () {
     await server.close()
-    server = await buildServer({ domain: 'localhost', complete: true })
+    server = await buildServer({
+      jwksUrl: 'https://localhost/.well-known/jwks.json',
+      complete: true
+    })
 
     const response = await server.inject({
       method: 'GET',
@@ -615,7 +617,10 @@ describe('RS256 JWT token validation', function () {
 
   it('should validate the audience', async function () {
     await server.close()
-    server = await buildServer({ domain: 'localhost', audience: 'foo' })
+    server = await buildServer({
+      jwksUrl: 'https://localhost/.well-known/jwks.json',
+      audience: 'foo'
+    })
 
     const response = await server.inject({
       method: 'GET',
@@ -633,9 +638,13 @@ describe('RS256 JWT token validation', function () {
     })
   })
 
-  it('should validate the audience using the domain', async function () {
+  it('should validate the audience using the jwksUrl', async function () {
     await server.close()
-    server = await buildServer({ domain: 'localhost', audience: true, secret: 'secret' })
+    server = await buildServer({
+      jwksUrl: 'https://localhost/.well-known/jwks.json',
+      audience: true,
+      secret: 'secret'
+    })
 
     const response = await server.inject({
       method: 'GET',
@@ -653,10 +662,10 @@ describe('RS256 JWT token validation', function () {
     })
   })
 
-  it('should validate with multiple audiences ', async function () {
+  it('should validate with multiple audiences', async function () {
     await server.close()
     server = await buildServer({
-      domain: 'localhost',
+      jwksUrl: 'https://localhost/.well-known/jwks.json',
       audience: ['https://otherhost/', 'foo', 'https://somehost/'],
       secret: 'secret'
     })
@@ -798,7 +807,11 @@ describe('RS256 JWT token validation', function () {
 
   it('should correctly get the key again from the well-known URL if cache expired', async function () {
     await server.close()
-    server = await buildServer({ domain: 'localhost', secret: 'secret', secretsTtl: 10 })
+    server = await buildServer({
+      jwksUrl: 'https://localhost/.well-known/jwks.json',
+      secret: 'secret',
+      secretsTtl: 10
+    })
 
     let response
 
@@ -831,7 +844,11 @@ describe('RS256 JWT token validation', function () {
 
   it('should not cache the key if cache was disabled', async function () {
     await server.close()
-    server = await buildServer({ domain: 'localhost', secret: 'secret', secretsTtl: 0 })
+    server = await buildServer({
+      jwksUrl: 'https://localhost/.well-known/jwks.json',
+      secret: 'secret',
+      secretsTtl: 0
+    })
 
     let response
 
@@ -966,7 +983,7 @@ describe('General error handling', function () {
 
   it('should complain if the JWT token has an invalid issuer', async function () {
     await server.close()
-    server = await buildServer({ domain: 'foo', secret: 'secret' })
+    server = await buildServer({ jwksUrl: 'foo', secret: 'secret' })
 
     const response = await server.inject({
       method: 'GET',

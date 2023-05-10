@@ -16,18 +16,18 @@ async function buildOAuthServer() {
 async function buildServer({ oAuthServerUrl }) {
   const server = Fastify()
 
-  // Setup fastify-auth0-verify
+  // Setup fastify-jwt-jwks
   await server.register(require('../'), {
     jwksUrl: `${oAuthServerUrl}/jwks`,
     issuer: oAuthServerUrl
   })
 
-  // Setup auth0 protected route
+  // Setup jwt protected route
   server.get('/protected', { preValidation: server.authenticate }, (req, reply) => {
     reply.send({ route: 'Protected route' })
   })
 
-  // Setup auth0 public route
+  // Setup public route
   server.get('/public', (req, reply) => {
     reply.send({ route: 'Public route' })
   })

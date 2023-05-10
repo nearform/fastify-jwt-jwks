@@ -1,16 +1,16 @@
-# fastify-auth0-verify
+# fastify-jwt-jwks
 
-[![Package Version](https://img.shields.io/npm/v/fastify-auth0-verify.svg)](https://npm.im/fastify-auth0-verify)
-[![ci](https://github.com/nearform/fastify-auth0-verify/actions/workflows/ci.yml/badge.svg)](https://github.com/nearform/fastify-auth0-verify/actions/workflows/ci.yml)
+[![Package Version](https://img.shields.io/npm/v/fastify-jwt-jwks.svg)](https://npm.im/fastify-jwt-jwks)
+[![ci](https://github.com/nearform/fastify-jwt-jwks/actions/workflows/ci.yml/badge.svg)](https://github.com/nearform/fastify-jwt-jwks/actions/workflows/ci.yml)
 
-Auth0 verification plugin for Fastify, internally uses [@fastify/jwt](https://www.npmjs.com/package/@fastify/jwt).
+JWT verification plugin for Fastify, internally uses [@fastify/jwt](https://www.npmjs.com/package/@fastify/jwt).
 
 ## Installation
 
 Just run:
 
 ```bash
-npm install fastify-auth0-verify --save
+npm install fastify-jwt-jwks --save
 ```
 
 ## Usage
@@ -41,7 +41,7 @@ Example:
 const fastify = require('fastify')
 const server = fastify()
 
-await server.register(require('fastify-auth0-verify'), {
+await server.register(require('fastify-jwt-jwks'), {
   jwksUrl: '<JWKS url>',
   audience: '<app audience>'
 })
@@ -57,10 +57,10 @@ server.listen(0, err => {
 })
 ```
 
-You can configure there to be more than one Auth0 API audiences:
+You can configure there to be more than one JWT API audience:
 
 ```js
-await server.register(require('fastify-auth0-verify'), {
+await server.register(require('fastify-jwt-jwks'), {
   jwksUrl: '<JWKS url>',
   audience: ['<app audience>', '<admin audience>']
 })
@@ -69,7 +69,7 @@ await server.register(require('fastify-auth0-verify'), {
 You can include [@fastify/jwt verify](https://github.com/fastify/fastify-jwt#verify) options:
 
 ```js
-await server.register(require('fastify-auth0-verify'), {
+await server.register(require('fastify-jwt-jwks'), {
   jwksUrl: '<JWKS url>',
   audience: ['<app audience>', '<admin audience>'],
   cache: true, // @fastify/jwt cache

@@ -1,7 +1,7 @@
 {
   "name": "fastify-jwt-jwks",
   "version": "1.1.1",
-  "description": "Auth0 verification plugin for Fastify",
+  "description": "JWT JWKS verification plugin for Fastify",
   "author": "NearForm Ltd",
   "homepage": "https://github.com/nearform/fastify-jwt-jwks",
   "contributors": [
@@ -24,8 +24,7 @@
   ],
   "keywords": [
     "fastify",
-    "fastify-plugin",
-    "auth0"
+    "fastify-plugin"
   ],
   "repository": {
     "type": "git",

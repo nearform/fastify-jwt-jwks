@@ -1,9 +1,9 @@
 {
-  "name": "fastify-auth0-verify",
+  "name": "fastify-jwt-jwks",
   "version": "1.1.1",
   "description": "Auth0 verification plugin for Fastify",
   "author": "NearForm Ltd",
-  "homepage": "https://github.com/nearform/fastify-auth0-verify",
+  "homepage": "https://github.com/nearform/fastify-jwt-jwks",
   "contributors": [
     {
       "name": "Paolo Insogna",
@@ -29,10 +29,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nearform/fastify-auth0-verify.git"
+    "url": "git+https://github.com/nearform/fastify-jwt-jwks.git"
   },
   "bugs": {
-    "url": "https://github.com/nearform/fastify-auth0-verify/issues"
+    "url": "https://github.com/nearform/fastify-jwt-jwks/issues"
   },
   "main": "index.js",
   "types": "index.d.ts",

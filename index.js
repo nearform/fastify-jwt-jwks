@@ -149,13 +149,13 @@ function getSecret(request, reply, cb) {
     .then(decoded => {
       const { header } = decoded
 
-      // If the algorithm is not using RS256, the encryption key is Auth0 client secret
+      // If the algorithm is not using RS256, the encryption key is jwt client secret
       if (header.alg.startsWith('HS')) {
-        return cb(null, request.auth0Verify.secret)
+        return cb(null, request.jwtJwks.secret)
       }
 
       // If the algorithm is RS256, get the key remotely using a well-known URL containing a JWK set
-      getRemoteSecret(request.auth0Verify.jwksUrl, header.alg, header.kid, request.auth0VerifySecretsCache)
+      getRemoteSecret(request.jwtJwks.jwksUrl, header.alg, header.kid, request.jwtJwksSecretsCache)
         .then(key => cb(null, key))
         .catch(cb)
     })
@@ -199,8 +199,8 @@ function fastifyJwtJwks(instance, options, done) {
 
     // Setup our decorators
     instance.decorate('authenticate', authenticate)
-    instance.decorate('auth0Verify', jwtJwksOptions)
-    instance.decorateRequest('auth0Verify', {
+    instance.decorate('jwtJwks', jwtJwksOptions)
+    instance.decorateRequest('jwtJwks', {
       getter: () => jwtJwksOptions
     })
 
@@ -208,7 +208,7 @@ function fastifyJwtJwks(instance, options, done) {
       ttl > 0 ? new NodeCache({ stdTTL: ttl }) : { get: () => undefined, set: () => false, close: () => undefined }
 
     // Create a cache or a fake cache
-    instance.decorateRequest('auth0VerifySecretsCache', {
+    instance.decorateRequest('jwtJwksSecretsCache', {
       getter: () => cache
     })
 

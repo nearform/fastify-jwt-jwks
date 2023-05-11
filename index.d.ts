@@ -3,7 +3,7 @@ import { UserType, SignPayloadType } from '@fastify/jwt'
 
 import NodeCache from 'node-cache'
 
-export interface FastifyAuth0VerifyOptions {
+export interface FastifyJwtJwksOptions {
   /**
    * JSON Web Key Set url (JWKS).
    * The public endpoint returning the set of keys that contain amongst other things the keys needed to verify JSON Web Tokens (JWT)
@@ -58,8 +58,8 @@ export interface FastifyAuth0VerifyOptions {
   readonly formatUser?: (payload: SignPayloadType) => UserType
 }
 
-export interface Auth0Verify extends Pick<FastifyAuth0VerifyOptions, 'jwksUrl' | 'audience' | 'secret'> {
-  readonly verify: FastifyAuth0VerifyOptions & {
+export interface JwtJwks extends Pick<FastifyJwtJwksOptions, 'jwksUrl' | 'audience' | 'secret'> {
+  readonly verify: FastifyJwtJwksOptions & {
     readonly algorithms: readonly string[]
     readonly audience?: string | readonly string[]
   }
@@ -68,19 +68,19 @@ export interface Auth0Verify extends Pick<FastifyAuth0VerifyOptions, 'jwksUrl' |
 export type Authenticate = (request: FastifyRequest, reply: FastifyReply) => Promise<void>
 
 /**
- * Auth0 verification plugin for Fastify, internally uses @fastify/jwt and jsonwebtoken.
+ * JWT JWKS verification plugin for Fastify, internally uses @fastify/jwt and jsonwebtoken.
  */
-export const fastifyAuth0Verify: FastifyPluginCallback<FastifyAuth0VerifyOptions>
-export default fastifyAuth0Verify
+export const fastifyJwtJwks: FastifyPluginCallback<FastifyJwtJwksOptions>
+export default fastifyJwtJwks
 
 declare module 'fastify' {
   interface FastifyInstance {
     authenticate: Authenticate
-    auth0Verify: Auth0Verify
+    jwtJwks: JwtJwks
   }
 
   interface FastifyRequest {
-    auth0Verify: Auth0Verify
-    auth0VerifySecretsCache: Pick<NodeCache, 'get' | 'set' | 'close'>
+    jwtJwks: JwtJwks
+    jwtJwksSecretsCache: Pick<NodeCache, 'get' | 'set' | 'close'>
   }
 }

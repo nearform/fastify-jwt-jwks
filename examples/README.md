@@ -7,5 +7,5 @@ A token must also be provided.
 ### Example
 
 ```sh
-node index.js --domain {auth0 domain} --token {auth0 id token}
+node index.js --jwksUrl {jwksUrl} --token {jwt token}
 ```

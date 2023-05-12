@@ -149,13 +149,13 @@ function getSecret(request, reply, cb) {
     .then(decoded => {
       const { header } = decoded
 
-      // If the algorithm is not using RS256, the encryption key is Auth0 client secret
+      // If the algorithm is not using RS256, the encryption key is jwt client secret
       if (header.alg.startsWith('HS')) {
-        return cb(null, request.auth0Verify.secret)
+        return cb(null, request.jwtJwks.secret)
       }
 
       // If the algorithm is RS256, get the key remotely using a well-known URL containing a JWK set
-      getRemoteSecret(request.auth0Verify.jwksUrl, header.alg, header.kid, request.auth0VerifySecretsCache)
+      getRemoteSecret(request.jwtJwks.jwksUrl, header.alg, header.kid, request.jwtJwksSecretsCache)
         .then(key => cb(null, key))
         .catch(cb)
     })
@@ -180,17 +180,17 @@ async function authenticate(request, reply) {
   }
 }
 
-function fastifyAuth0Verify(instance, options, done) {
+function fastifyJwtJwks(instance, options, done) {
   try {
     // Check if secrets cache is wanted - Convert milliseconds to seconds and cache for a week by default
     const ttl = parseFloat('secretsTtl' in options ? options.secretsTtl : '604800000', 10) / 1e3
     delete options.secretsTtl
 
-    const auth0Options = verifyOptions(options)
+    const jwtJwksOptions = verifyOptions(options)
 
     // Setup @fastify/jwt
     instance.register(fastifyJwt, {
-      verify: auth0Options.verify,
+      verify: jwtJwksOptions.verify,
       cookie: options.cookie,
       secret: getSecret,
       jwtDecode: 'jwtDecode',
@@ -199,16 +199,16 @@ function fastifyAuth0Verify(instance, options, done) {
 
     // Setup our decorators
     instance.decorate('authenticate', authenticate)
-    instance.decorate('auth0Verify', auth0Options)
-    instance.decorateRequest('auth0Verify', {
-      getter: () => auth0Options
+    instance.decorate('jwtJwks', jwtJwksOptions)
+    instance.decorateRequest('jwtJwks', {
+      getter: () => jwtJwksOptions
     })
 
     const cache =
       ttl > 0 ? new NodeCache({ stdTTL: ttl }) : { get: () => undefined, set: () => false, close: () => undefined }
 
     // Create a cache or a fake cache
-    instance.decorateRequest('auth0VerifySecretsCache', {
+    instance.decorateRequest('jwtJwksSecretsCache', {
       getter: () => cache
     })
 
@@ -220,4 +220,4 @@ function fastifyAuth0Verify(instance, options, done) {
   }
 }
 
-module.exports = fastifyPlugin(fastifyAuth0Verify, { name: 'fastify-auth0-verify', fastify: '4.x' })
+module.exports = fastifyPlugin(fastifyJwtJwks, { name: 'fastify-jwt-jwks', fastify: '4.x' })

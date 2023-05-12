@@ -1,43 +1,43 @@
 import Fastify from 'fastify'
-import fastifyAuth0Verify from '.'
+import fastifyJwtJwks from '.'
 import { expectAssignable, expectType } from 'tsd'
 import { DecodePayloadType, FastifyJwtDecodeOptions } from '@fastify/jwt'
 import fastifyJWT from '@fastify/jwt'
 
 const fastify = Fastify()
 
-fastify.register(fastifyAuth0Verify, {
+fastify.register(fastifyJwtJwks, {
   jwksUrl: '<JWKS url>',
-  issuer: '<auth0 issuer>',
-  audience: '<auth0 app audience>'
+  issuer: '<jwt issuer>',
+  audience: '<jwt app audience>'
 })
-fastify.register(fastifyAuth0Verify, {
+fastify.register(fastifyJwtJwks, {
   jwksUrl: '<JWKS url>',
-  issuer: /<auth0 issuer>/,
-  audience: '<auth0 app audience>'
+  issuer: /<jwt issuer>/,
+  audience: '<jwt app audience>'
 })
-fastify.register(fastifyAuth0Verify, {
+fastify.register(fastifyJwtJwks, {
   jwksUrl: '<JWKS url>',
-  issuer: ['<auth0 issuer>', /<auth0 issuer>/],
-  audience: ['<auth0 app audience>', '<auth0 admin audience>']
+  issuer: ['<jwt issuer>', /<jwt issuer>/],
+  audience: ['<jwt app audience>', '<jwt admin audience>']
 })
-fastify.register(fastifyAuth0Verify, {
+fastify.register(fastifyJwtJwks, {
   jwksUrl: '<JWKS url>',
-  audience: ['<auth0 app audience>', '<auth0 admin audience>']
+  audience: ['<jwt app audience>', '<jwt admin audience>']
 })
 fastify.register(fastifyJWT, {
   secret: '<jwt secret>'
 })
-fastify.register(fastifyAuth0Verify, {
+fastify.register(fastifyJwtJwks, {
   cookie: {
     cookieName: '<cookie>',
     signed: true
   }
 })
-fastify.register(fastifyAuth0Verify, {
+fastify.register(fastifyJwtJwks, {
   jwksUrl: '<JWKS url>',
-  issuer: '<auth0 issuer>',
-  audience: '<auth0 app audience>',
+  issuer: '<jwt issuer>',
+  audience: '<jwt app audience>',
   formatUser: () => ({ foo: 'bar' })
 })
 

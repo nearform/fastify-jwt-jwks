@@ -40,9 +40,7 @@
     "test:ci": "npm run lint && npm run test -- --ci --coverageReporters=json && npm run test:types",
     "test:integration": "jest ./test-integration/",
     "test:types": "tsd",
-    "lint": "eslint index.js test test-integration",
-    "prepublishOnly": "npm run test:ci",
-    "postpublish": "git push origin && git push origin -f --tags"
+    "lint": "eslint index.js test test-integration"
   },
   "dependencies": {
     "@fastify/cookie": "^8.0.0",

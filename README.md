@@ -3,7 +3,11 @@
 [![Package Version](https://img.shields.io/npm/v/fastify-jwt-jwks.svg)](https://npm.im/fastify-jwt-jwks)
 [![ci](https://github.com/nearform/fastify-jwt-jwks/actions/workflows/ci.yml/badge.svg)](https://github.com/nearform/fastify-jwt-jwks/actions/workflows/ci.yml)
 
-JWT verification plugin for Fastify, internally uses [@fastify/jwt](https://www.npmjs.com/package/@fastify/jwt).
+JSON Web Key Set (JWKS) verification plugin for Fastify, internally uses [@fastify/jwt](https://www.npmjs.com/package/@fastify/jwt).
+
+#### Note
+
+JSON Web Key Sets (JWKS) are used to verify that a signed JWT originated from a particular authorization server, and that the token hasn't been tampered with. If you are looking to implement JWT authentication in your Fastify application you may be looking for [@fastify/jwt](https://www.npmjs.com/package/@fastify/jwt).
 
 ## Installation
 

@@ -86,14 +86,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 ### Tests
 
-Tests are currently split into **unit** and **integration**. Integration tests needs the following environment variables:
-
-| Env var               |                                                             |
-| --------------------- | ----------------------------------------------------------- |
-| `AUTH0_DOMAIN`        | Auth0 dashboard -> application -> Settings -> Domain        |
-| `AUTH0_CLIENT_ID`     | Auth0 dashboard -> application -> Settings -> Client ID     |
-| `AUTH0_CLIENT_SECRET` | Auth0 dashboard -> application -> Settings -> Client Secret |
-| `AUTH0_API_AUDIENCE`  | Auth0 application identifier                                |
+Tests are currently split into **unit** and **integration** tests. 
 
 ## License
 

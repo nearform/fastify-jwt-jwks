@@ -702,6 +702,21 @@ describe('RS256 JWT token validation', function () {
     })
   })
 
+  it('should reject an invalid token', async function () {
+    const response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.hs256Valid}` }
+    })
+
+    expect(response.statusCode).toEqual(401)
+    expect(response.json()).toEqual({
+      statusCode: 401,
+      error: 'Unauthorized',
+      message: 'Unsupported token.'
+    })
+  })
+
   it('should reject a token when is not possible to retrieve the JWK set due to a HTTP error', async function () {
     nock.cleanAll()
 

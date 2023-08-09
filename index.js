@@ -151,6 +151,9 @@ function getSecret(request, reply, cb) {
 
       // If the algorithm is not using RS256, the encryption key is jwt client secret
       if (header.alg.startsWith('HS')) {
+        if (!request.jwtJwks.secret) {
+          throw new Unauthorized(errorMessages.invalidAlgorithm)
+        }
         return cb(null, request.jwtJwks.secret)
       }
 

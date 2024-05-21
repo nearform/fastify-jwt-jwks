@@ -188,14 +188,17 @@ async function buildServer(options) {
   await server.register(require('../'), options)
   await server.register(require('@fastify/cookie'))
 
-  server.get('/verify', { preValidation: server.authenticate }, req => {
+  const authenticateMethodName = options.namespace ? `${options.namespace}Authenticate` : 'authenticate'
+  const decodeFunctionName = options.namespace ? `${options.namespace}JwtDecode` : 'jwtDecode'
+
+  server.get('/verify', { preValidation: server[authenticateMethodName] }, req => {
     return req.user
   })
 
   server.get('/decode', async req => {
     return {
-      regular: await req.jwtDecode(),
-      full: await req.jwtDecode({ decode: { complete: true } })
+      regular: await req[decodeFunctionName](),
+      full: await req[decodeFunctionName]({ decode: { complete: true } })
     }
   })
 
@@ -221,7 +224,7 @@ describe('Options parsing', function () {
     server.close()
   })
 
-  it('should enable both algorithms is both options are present', async function () {
+  it('should enable both algorithms if both options are present', async function () {
     const server = await buildServer({ jwksUrl: 'https://localhost/.well-known/jwks.json', secret: 'secret' })
 
     expect(server.jwtJwks.verify.algorithms).toEqual(['RS256', 'HS256'])
@@ -370,7 +373,7 @@ describe('JWT cookie token decoding', function () {
   })
 })
 
-describe('format decoded token', function () {
+describe('Format decoded token', function () {
   let server
 
   beforeAll(async function () {
@@ -411,7 +414,7 @@ describe('HS256 JWT token validation', function () {
 
   afterEach(() => server.close())
 
-  it('should make the token informations available through request.user', async function () {
+  it('should make the token information available through request.user', async function () {
     const response = await server.inject({
       method: 'GET',
       url: '/verify',
@@ -422,7 +425,7 @@ describe('HS256 JWT token validation', function () {
     expect(response.json()).toEqual({ sub: '1234567890', name: 'John Doe', admin: true })
   })
 
-  it('should make the complete token informations available through request.user', async function () {
+  it('should make the complete token information available through request.user', async function () {
     await server.close()
     server = await buildServer({ secret: 'secret', complete: true })
 
@@ -919,6 +922,91 @@ describe('RS256 JWT token validation', function () {
       statusCode: 401,
       error: 'Unauthorized',
       message: 'Missing Key: Public key must be provided'
+    })
+  })
+})
+
+describe('Server configured with the namespace option', function () {
+  let server
+
+  afterAll(() => {
+    server.close()
+    nock.cleanAll()
+    nock.enableNetConnect()
+  })
+
+  it('decorates the server with the correct function names', async function () {
+    server = await buildServer({ secret: 'secret', namespace: 'test' })
+    // TODO PK Use hasDecorator and hasRequestDecorator to test all symbols
+    expect(server.authenticate).toBeFalsy()
+    expect(server.jwtJwks).toBeFalsy()
+    expect(server.testAuthenticate).toBeTruthy()
+    expect(server.testJwtJwks).toBeTruthy()
+  })
+
+  it('should be able to decode a JWT successfully', async function () {
+    server = await buildServer({ secret: 'secret', namespace: 'test' })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/decode',
+      headers: { Authorization: `Bearer ${tokens.hs256Valid}` }
+    })
+
+    expect(response.statusCode).toEqual(200)
+    expect(response.json()).toEqual({
+      regular: {
+        admin: true,
+        name: 'John Doe',
+        sub: '1234567890'
+      },
+      full: {
+        header: {
+          alg: 'HS256',
+          typ: 'JWT'
+        },
+        input:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwibmFtZSI6IkpvaG4gRG9lIiwic3ViIjoiMTIzNDU2Nzg5MCJ9',
+        payload: {
+          admin: true,
+          name: 'John Doe',
+          sub: '1234567890'
+        },
+        signature: 'eNK_fimsCW3Q-meOXyc_dnZHubl2D4eZkIcn6llniCk'
+      }
+    })
+  })
+
+  it('should be able to validate an HS256 JWT token successfully', async function () {
+    server = await buildServer({ secret: 'secret', namespace: 'test' })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.hs256Valid}` }
+    })
+
+    expect(response.statusCode).toEqual(200)
+    expect(response.json()).toEqual({ sub: '1234567890', name: 'John Doe', admin: true })
+  })
+
+  it('should be able to validate an RS256 JWT token successfully', async function () {
+    server = await buildServer({ jwksUrl: 'https://localhost/.well-known/jwks.json', namespace: 'test' })
+    nock.disableNetConnect()
+    nock('https://localhost/').get('/.well-known/jwks.json').reply(200, jwks)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.rs256Valid}` }
+    })
+
+    expect(response.statusCode).toEqual(200)
+    expect(response.json()).toEqual({
+      sub: '1234567890',
+      name: 'John Doe',
+      admin: true,
+      iss: 'https://localhost/'
     })
   })
 })

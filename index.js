@@ -94,7 +94,7 @@ async function getRemoteSecret(jwksUrl, alg, kid, cache) {
     if (cached) {
       return cached
     } else if (cached === null) {
-      // null is returned when a previous attempt resulted in the key missing in the JWKs - Do not attemp to fetch again
+      // null is returned when a previous attempt resulted in the key missing in the JWKs - Do not attempt to fetch again
       throw new Unauthorized(errorMessages.missingKey)
     }
 
@@ -143,48 +143,55 @@ async function getRemoteSecret(jwksUrl, alg, kid, cache) {
   }
 }
 
-function getSecret(request, reply, cb) {
-  request
-    .jwtDecode({ decode: { complete: true } })
-    .then(decoded => {
-      const { header } = decoded
-
-      // If the algorithm is not using RS256, the encryption key is jwt client secret
-      if (header.alg.startsWith('HS')) {
-        if (!request.jwtJwks.secret) {
-          throw new Unauthorized(errorMessages.invalidAlgorithm)
-        }
-        return cb(null, request.jwtJwks.secret)
-      }
-
-      // If the algorithm is RS256, get the key remotely using a well-known URL containing a JWK set
-      getRemoteSecret(request.jwtJwks.jwksUrl, header.alg, header.kid, request.jwtJwksSecretsCache)
-        .then(key => cb(null, key))
-        .catch(cb)
-    })
-    .catch(cb)
-}
-
-async function authenticate(request, reply) {
-  try {
-    await request.jwtVerify()
-  } catch (e) {
-    for (const [jwtMessage, errorMessage] of fastifyJwtErrors) {
-      if (e.message.match(jwtMessage)) {
-        throw new Unauthorized(errorMessage, { a: 1 })
-      }
-    }
-
-    if (e.statusCode) {
-      throw e
-    }
-
-    throw new Unauthorized(e.message)
-  }
-}
-
 function fastifyJwtJwks(instance, options, done) {
   try {
+    // Construct the JWT function names and this plugin's decorator names using the same rules as @fastify/jwt
+    const { namespace } = options
+    const decodeFunctionName = namespace ? `${namespace}JwtDecode` : 'jwtDecode'
+    const verifyFunctionName = namespace ? `${namespace}JwtVerify` : 'jwtVerify'
+    const authenticateMethodName = namespace ? `${namespace}Authenticate` : 'authenticate'
+    const jwksOptionsName = namespace ? `${namespace}JwtJwks` : 'jwtJwks'
+    const secretsCacheName = namespace ? `${namespace}JwtJwksSecretsCache` : 'jwtJwksSecretsCache'
+
+    function getSecret(request, reply, cb) {
+      request[decodeFunctionName]({ decode: { complete: true } })
+        .then(decoded => {
+          const { header } = decoded
+
+          // If the algorithm is not using RS256, the encryption key is jwt client secret
+          if (header.alg.startsWith('HS')) {
+            if (!request[jwksOptionsName].secret) {
+              throw new Unauthorized(errorMessages.invalidAlgorithm)
+            }
+            return cb(null, request[jwksOptionsName].secret)
+          }
+
+          // If the algorithm is RS256, get the key remotely using a well-known URL containing a JWK set
+          getRemoteSecret(request[jwksOptionsName].jwksUrl, header.alg, header.kid, request[secretsCacheName])
+            .then(key => cb(null, key))
+            .catch(cb)
+        })
+        .catch(cb)
+    }
+
+    async function authenticate(request, reply) {
+      try {
+        await request[verifyFunctionName]()
+      } catch (e) {
+        for (const [jwtMessage, errorMessage] of fastifyJwtErrors) {
+          if (e.message.match(jwtMessage)) {
+            throw new Unauthorized(errorMessage, { a: 1 })
+          }
+        }
+
+        if (e.statusCode) {
+          throw e
+        }
+
+        throw new Unauthorized(e.message)
+      }
+    }
+
     // Check if secrets cache is wanted - Convert milliseconds to seconds and cache for a week by default
     const ttl = parseFloat('secretsTtl' in options ? options.secretsTtl : '604800000', 10) / 1e3
     delete options.secretsTtl
@@ -196,14 +203,14 @@ function fastifyJwtJwks(instance, options, done) {
       verify: jwtJwksOptions.verify,
       cookie: options.cookie,
       secret: getSecret,
-      jwtDecode: 'jwtDecode',
-      formatUser: options.formatUser
+      formatUser: options.formatUser,
+      namespace
     })
 
     // Setup our decorators
-    instance.decorate('authenticate', authenticate)
-    instance.decorate('jwtJwks', jwtJwksOptions)
-    instance.decorateRequest('jwtJwks', {
+    instance.decorate(authenticateMethodName, authenticate)
+    instance.decorate(jwksOptionsName, jwtJwksOptions)
+    instance.decorateRequest(jwksOptionsName, {
       getter: () => jwtJwksOptions
     })
 
@@ -211,7 +218,7 @@ function fastifyJwtJwks(instance, options, done) {
       ttl > 0 ? new NodeCache({ stdTTL: ttl }) : { get: () => undefined, set: () => false, close: () => undefined }
 
     // Create a cache or a fake cache
-    instance.decorateRequest('jwtJwksSecretsCache', {
+    instance.decorateRequest(secretsCacheName, {
       getter: () => cache
     })
 

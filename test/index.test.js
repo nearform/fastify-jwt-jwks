@@ -929,7 +929,7 @@ describe('RS256 JWT token validation', function () {
 describe('Server configured with the namespace option', function () {
   let server
 
-  afterAll(() => {
+  afterEach(() => {
     server.close()
     nock.cleanAll()
     nock.enableNetConnect()

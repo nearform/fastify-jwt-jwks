@@ -30,6 +30,7 @@ Register as a plugin, providing one or more of the following options:
 - `cookie`: Used to indicate that the token can be passed using cookie, instead of the Authorization header.
   - `cookieName`: The name of the cookie.
   - `signed`: Indicates whether the cookie is signed or not. If set to `true`, the JWT will be verified using the unsigned value.
+- `namespace`: A string used to namespace the decorators of this plugin. This is to allow this plugin to be applied multiple times to a single Fastify instance. See the description of the [namespace parameter](https://github.com/fastify/fastify-jwt?tab=readme-ov-file#namespace) in @fastify/jwt.
 
 Since this plugin is based on the [@fastify/jwt](https://www.npmjs.com/package/@fastify/jwt) `verify`, it is also possibile to pass the options documented [here](https://github.com/fastify/fastify-jwt#verify), see the example below.
 

@@ -56,6 +56,11 @@ export interface FastifyJwtJwksOptions {
    * You may customize the request.user object setting a custom sync function as parameter:
    */
   readonly formatUser?: (payload: SignPayloadType) => UserType
+  /**
+   * A string used to namespace the decorators of this plugin. This is to allow this plugin to be applied multiple times
+   * to a single Fastify instance. See the description of the namespace parameter in @fastify/jwt.
+   */
+  readonly namespace?: string
 }
 
 export interface JwtJwks extends Pick<FastifyJwtJwksOptions, 'jwksUrl' | 'audience' | 'secret'> {

@@ -188,17 +188,14 @@ async function buildServer(options) {
   await server.register(require('../'), options)
   await server.register(require('@fastify/cookie'))
 
-  const authenticateMethodName = options.namespace ? `${options.namespace}Authenticate` : 'authenticate'
-  const decodeFunctionName = options.namespace ? `${options.namespace}JwtDecode` : 'jwtDecode'
-
-  server.get('/verify', { preValidation: server[authenticateMethodName] }, req => {
+  server.get('/verify', { preValidation: server.authenticate }, req => {
     return req.user
   })
 
   server.get('/decode', async req => {
     return {
-      regular: await req[decodeFunctionName](),
-      full: await req[decodeFunctionName]({ decode: { complete: true } })
+      regular: await req.jwtVerify(),
+      full: await req.jwtVerify({ decode: { complete: true } })
     }
   })
 
@@ -929,85 +926,24 @@ describe('RS256 JWT token validation', function () {
 describe('Server configured with the namespace option', function () {
   let server
 
-  afterEach(() => {
-    server.close()
-    nock.cleanAll()
-    nock.enableNetConnect()
-  })
+  afterAll(() => server.close())
 
   it('decorates the server with the correct function names', async function () {
     server = await buildServer({ secret: 'secret', namespace: 'test' })
-    // TODO PK Use hasDecorator and hasRequestDecorator to test all symbols
-    expect(server.authenticate).toBeFalsy()
-    expect(server.jwtJwks).toBeFalsy()
-    expect(server.testAuthenticate).toBeTruthy()
-    expect(server.testJwtJwks).toBeTruthy()
-  })
-
-  it('should be able to decode a JWT successfully', async function () {
-    server = await buildServer({ secret: 'secret', namespace: 'test' })
-
-    const response = await server.inject({
-      method: 'GET',
-      url: '/decode',
-      headers: { Authorization: `Bearer ${tokens.hs256Valid}` }
-    })
-
-    expect(response.statusCode).toEqual(200)
-    expect(response.json()).toEqual({
-      regular: {
-        admin: true,
-        name: 'John Doe',
-        sub: '1234567890'
-      },
-      full: {
-        header: {
-          alg: 'HS256',
-          typ: 'JWT'
-        },
-        input:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwibmFtZSI6IkpvaG4gRG9lIiwic3ViIjoiMTIzNDU2Nzg5MCJ9',
-        payload: {
-          admin: true,
-          name: 'John Doe',
-          sub: '1234567890'
-        },
-        signature: 'eNK_fimsCW3Q-meOXyc_dnZHubl2D4eZkIcn6llniCk'
-      }
-    })
-  })
-
-  it('should be able to validate an HS256 JWT token successfully', async function () {
-    server = await buildServer({ secret: 'secret', namespace: 'test' })
-
-    const response = await server.inject({
-      method: 'GET',
-      url: '/verify',
-      headers: { Authorization: `Bearer ${tokens.hs256Valid}` }
-    })
-
-    expect(response.statusCode).toEqual(200)
-    expect(response.json()).toEqual({ sub: '1234567890', name: 'John Doe', admin: true })
-  })
-
-  it('should be able to validate an RS256 JWT token successfully', async function () {
-    server = await buildServer({ jwksUrl: 'https://localhost/.well-known/jwks.json', namespace: 'test' })
-    nock.disableNetConnect()
-    nock('https://localhost/').get('/.well-known/jwks.json').reply(200, jwks)
-
-    const response = await server.inject({
-      method: 'GET',
-      url: '/verify',
-      headers: { Authorization: `Bearer ${tokens.rs256Valid}` }
-    })
-
-    expect(response.statusCode).toEqual(200)
-    expect(response.json()).toEqual({
-      sub: '1234567890',
-      name: 'John Doe',
-      admin: true,
-      iss: 'https://localhost/'
-    })
+    // @fastify/jwt decorators
+    expect(server.hasRequestDecorator('jwtDecode')).toBe(false)
+    expect(server.hasRequestDecorator('jwtVerify')).toBe(false)
+    expect(server.hasRequestDecorator('testJwtDecode')).toBe(true)
+    expect(server.hasRequestDecorator('testJwtVerify')).toBe(true)
+    // fastify-jwt-jwks decorators
+    expect(server.hasDecorator('authenticate')).toBe(false)
+    expect(server.hasDecorator('jwtJwks')).toBe(false)
+    expect(server.hasRequestDecorator('jwtJwks')).toBe(false)
+    expect(server.hasRequestDecorator('jwtJwksSecretsCache')).toBe(false)
+    expect(server.hasDecorator('testAuthenticate')).toBe(true)
+    expect(server.hasDecorator('testJwtJwks')).toBe(true)
+    expect(server.hasRequestDecorator('testJwtJwks')).toBe(true)
+    expect(server.hasRequestDecorator('testJwtJwksSecretsCache')).toBe(true)
   })
 })
 

@@ -194,8 +194,8 @@ async function buildServer(options) {
 
   server.get('/decode', async req => {
     return {
-      regular: await req.jwtVerify(),
-      full: await req.jwtVerify({ decode: { complete: true } })
+      regular: await req.jwtDecode(),
+      full: await req.jwtDecode({ decode: { complete: true } })
     }
   })
 

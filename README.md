@@ -83,6 +83,34 @@ await server.register(require('fastify-jwt-jwks'), {
 })
 ```
 
+You can also use the `namespace` option to apply this plugin multiple times to the same Fastify instance, in order to perform JWT verification with different JWKs URLs:
+
+```js
+await server.register(require('fastify-jwt-jwks'), {
+  jwksUrl: '<JWKS url>',
+  audience: '<app audience>'
+})
+
+await server.register(require('fastify-jwt-jwks'), {
+  jwksUrl: '<JWKS url 2>',
+  audience: '<app audience 2>',
+  namespace: 'newToken'
+})
+
+server.get('/verify',
+  {
+    preValidation: async function (request, reply) {
+      try {
+        await server.authenticate()
+      } catch (err) {
+        await server.newTokenAuthenticate()
+      }
+    }
+  },
+  (request, reply) => { reply.send(request.user) }
+)
+```
+
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md)

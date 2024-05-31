@@ -221,7 +221,7 @@ describe('Options parsing', function () {
     server.close()
   })
 
-  it('should enable both algorithms is both options are present', async function () {
+  it('should enable both algorithms if both options are present', async function () {
     const server = await buildServer({ jwksUrl: 'https://localhost/.well-known/jwks.json', secret: 'secret' })
 
     expect(server.jwtJwks.verify.algorithms).toEqual(['RS256', 'HS256'])
@@ -370,7 +370,7 @@ describe('JWT cookie token decoding', function () {
   })
 })
 
-describe('format decoded token', function () {
+describe('Format decoded token', function () {
   let server
 
   beforeAll(async function () {
@@ -411,7 +411,7 @@ describe('HS256 JWT token validation', function () {
 
   afterEach(() => server.close())
 
-  it('should make the token informations available through request.user', async function () {
+  it('should make the token information available through request.user', async function () {
     const response = await server.inject({
       method: 'GET',
       url: '/verify',
@@ -422,7 +422,7 @@ describe('HS256 JWT token validation', function () {
     expect(response.json()).toEqual({ sub: '1234567890', name: 'John Doe', admin: true })
   })
 
-  it('should make the complete token informations available through request.user', async function () {
+  it('should make the complete token information available through request.user', async function () {
     await server.close()
     server = await buildServer({ secret: 'secret', complete: true })
 
@@ -920,6 +920,30 @@ describe('RS256 JWT token validation', function () {
       error: 'Unauthorized',
       message: 'Missing Key: Public key must be provided'
     })
+  })
+})
+
+describe('Server configured with the namespace option', function () {
+  let server
+
+  afterAll(() => server.close())
+
+  it('decorates the server with the correct function names', async function () {
+    server = await buildServer({ secret: 'secret', namespace: 'test' })
+    // @fastify/jwt decorators
+    expect(server.hasRequestDecorator('jwtDecode')).toBe(false)
+    expect(server.hasRequestDecorator('jwtVerify')).toBe(false)
+    expect(server.hasRequestDecorator('testJwtDecode')).toBe(true)
+    expect(server.hasRequestDecorator('testJwtVerify')).toBe(true)
+    // fastify-jwt-jwks decorators
+    expect(server.hasDecorator('authenticate')).toBe(false)
+    expect(server.hasDecorator('jwtJwks')).toBe(false)
+    expect(server.hasRequestDecorator('jwtJwks')).toBe(false)
+    expect(server.hasRequestDecorator('jwtJwksSecretsCache')).toBe(false)
+    expect(server.hasDecorator('testAuthenticate')).toBe(true)
+    expect(server.hasDecorator('testJwtJwks')).toBe(true)
+    expect(server.hasRequestDecorator('testJwtJwks')).toBe(true)
+    expect(server.hasRequestDecorator('testJwtJwksSecretsCache')).toBe(true)
   })
 })
 

@@ -1,8 +1,8 @@
-# Welcome to fastify-auth0-verify!
+# Welcome to fastify-jwt-jwks!
 
-Please take a second to read over this before opening an issue. Providing complete information upfront will help us address any issue (and ship new features!) faster.
+Please take a second to read this over before opening an issue. Providing complete information up front will help us address any issue (and ship new features!) faster.
 
-We greatly appreciate bug fixes, documentation improvements and new features, however when contributing a new major feature, it is a good idea to idea to first open an issue, to make sure the feature it fits with the goal of the project, so we don't waste your or our time.
+We greatly appreciate bug fixes, documentation improvements and new features, however when contributing a new major feature, it is a good idea to first open an issue, to make sure the feature fits with the goal of the project, so we don't waste your or our time.
 
 ## Bug Reports
 
@@ -12,7 +12,7 @@ A perfect bug report would have the following:
 2. Details on what versions of node and XZY you are using (`node -v`).
 3. A simple repeatable test case for us to run. Please try to run through it 2-3 times to ensure it is completely repeatable.
 
-We would like to avoid issues that require a follow up questions to identify the bug. These follow ups are difficult to do unless we have a repeatable test case.
+We would like to avoid issues that require follow up questions to identify the bug. These follow ups are difficult to do unless we have a repeatable test case.
 
 ## For Developers
 
@@ -20,7 +20,7 @@ All contributions should fit the [standard](https://github.com/standard/standard
 You can test this by running:
 
 ```
-npm lint
+npm run lint
 npm test
 ```
 

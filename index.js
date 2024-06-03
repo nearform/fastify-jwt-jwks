@@ -159,7 +159,6 @@ function fastifyJwtJwks(instance, options, done) {
       request[decodeFunctionName]({ decode: { complete: true } })
         .then(decoded => {
           const { header } = decoded
-          console.log(decoded.header)
           // If the algorithm is not using RS256, the encryption key is jwt client secret
           if (header.alg.startsWith('HS')) {
             if (!request[jwksOptionsName].secret) {

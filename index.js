@@ -112,7 +112,9 @@ async function getRemoteSecret(jwksUrl, alg, kid, cache) {
     }
 
     // Find the key with ID and algorithm matching the JWT token header
-    const key = body.keys.find(k => k.alg === alg && k.kid === kid)
+    const key = body.keys.find(
+      k => k.kid === kid && ((k.alg && k.alg === alg) || (k.kty && k.kty === 'RSA' && k.use === 'sig'))
+    )
 
     if (!key) {
       // Mark the key as missing
@@ -157,7 +159,7 @@ function fastifyJwtJwks(instance, options, done) {
       request[decodeFunctionName]({ decode: { complete: true } })
         .then(decoded => {
           const { header } = decoded
-
+          console.log(decoded.header)
           // If the algorithm is not using RS256, the encryption key is jwt client secret
           if (header.alg.startsWith('HS')) {
             if (!request[jwksOptionsName].secret) {

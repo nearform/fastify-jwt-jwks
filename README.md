@@ -26,7 +26,7 @@ Register as a plugin, providing one or more of the following options:
 - `issuer`: The domain of the system which is issuing OAuth access tokens. By default the domain will be also used as audience. Accepts a string value, or an array of strings for multiple issuers.
 - `secret`: The OAuth client secret. It enables verification of HS256 encoded JWT tokens.
 - `complete`: If to return also the header and signature of the verified token.
-- `secretsTtl`: How long (in milliseconds) to cache RS256 secrets before getting them again using well known JWKS URLS. Setting to 0 or less disables the cache.
+- `secretsTtl`: How long (in milliseconds) to cache RS256 secrets before getting them again using well known JWKS URLS. Setting to 0 or less disables the cache. Defaults to 1 week.
 - `cookie`: Used to indicate that the token can be passed using cookie, instead of the Authorization header.
   - `cookieName`: The name of the cookie.
   - `signed`: Indicates whether the cookie is signed or not. If set to `true`, the JWT will be verified using the unsigned value.

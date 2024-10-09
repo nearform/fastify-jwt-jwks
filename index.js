@@ -231,6 +231,6 @@ function fastifyJwtJwks(instance, options, done) {
   }
 }
 
-module.exports = fastifyPlugin(fastifyJwtJwks, { name: 'fastify-jwt-jwks', fastify: '4.x' })
+module.exports = fastifyPlugin(fastifyJwtJwks, { name: 'fastify-jwt-jwks', fastify: '5.x' })
 module.exports.default = fastifyJwtJwks
 module.exports.fastifyJwtJwks = fastifyJwtJwks

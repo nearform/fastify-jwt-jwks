@@ -36,9 +36,8 @@
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
-    "test": "jest ./test/ --coverage",
-    "test:ci": "npm run lint && npm run test -- --ci --coverageReporters=json && npm run test:types",
-    "test:integration": "jest ./test-integration/",
+    "test": "node --test",
+    "test:ci": "npm run lint && npm run test && npm run test:types",
     "test:types": "tsd",
     "lint": "eslint index.js test test-integration"
   },

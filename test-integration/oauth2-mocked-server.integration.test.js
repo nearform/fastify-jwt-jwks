@@ -1,3 +1,4 @@
+const { describe, test, before, after, expect } = require('node:test')
 const Fastify = require('fastify')
 const { OAuth2Server } = require('oauth2-mock-server')
 const fetch = require('cross-fetch')
@@ -40,24 +41,24 @@ describe('Authentication against oauth2 mocked server', () => {
   let server
   let OAuthServer
 
-  beforeAll(async function () {
+  before(async function () {
     OAuthServer = await buildOAuthServer()
     server = await buildServer({ oAuthServerUrl: OAuthServer.issuer.url })
   })
 
-  afterAll(async () => {
+  after(async () => {
     server.close()
     await OAuthServer.stop()
   })
 
-  it('Protects protected routes', async () => {
+  test('Protects protected routes', async t => {
     const publicResponse = await server.inject('/public')
-    expect(publicResponse.statusCode).toEqual(200)
-    expect(publicResponse.json()).toEqual({ route: 'Public route' })
+    t.assert.deepStrictEqual(publicResponse.statusCode, 200)
+    t.assert.deepStrictEqual(publicResponse.json(), { route: 'Public route' })
 
     const protectedResponseWithoutAuthHeader = await server.inject('/protected')
-    expect(protectedResponseWithoutAuthHeader.statusCode).toEqual(401)
-    expect(protectedResponseWithoutAuthHeader.json()).toEqual({
+    t.assert.deepStrictEqual(protectedResponseWithoutAuthHeader.statusCode, 401)
+    t.assert.deepStrictEqual(protectedResponseWithoutAuthHeader.json(), {
       error: 'Unauthorized',
       message: 'Missing Authorization HTTP header.',
       statusCode: 401
@@ -72,8 +73,8 @@ describe('Authentication against oauth2 mocked server', () => {
         Authorization: invalidAuthToken
       }
     })
-    expect(protectedResponseWithInvalidAuthHeader.statusCode).toEqual(401)
-    expect(protectedResponseWithInvalidAuthHeader.json()).toEqual({
+    t.assert.deepStrictEqual(protectedResponseWithInvalidAuthHeader.statusCode, 401)
+    t.assert.deepStrictEqual(protectedResponseWithInvalidAuthHeader.json(), {
       code: 'FST_JWT_AUTHORIZATION_TOKEN_INVALID',
       error: 'Unauthorized',
       message: 'Authorization token is invalid: The token header is not a valid base64url serialized JSON.',
@@ -81,12 +82,7 @@ describe('Authentication against oauth2 mocked server', () => {
     })
   })
 
-  it('Returns protected route when expected auth header is provided', async () => {
-    if (process.version.startsWith('v14')) {
-      console.log('Skipping test on v14')
-      return
-    }
-
+  test('Returns protected route when expected auth header is provided', async t => {
     const authResponse = await fetch(`${OAuthServer.issuer.url}/token`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -104,7 +100,7 @@ describe('Authentication against oauth2 mocked server', () => {
       }
     })
 
-    expect(protectedResponse.statusCode).toEqual(200)
-    expect(protectedResponse.json()).toEqual({ route: 'Protected route' })
+    t.assert.deepStrictEqual(protectedResponse.statusCode, 200)
+    t.assert.deepStrictEqual(protectedResponse.json(), { route: 'Protected route' })
   })
 })

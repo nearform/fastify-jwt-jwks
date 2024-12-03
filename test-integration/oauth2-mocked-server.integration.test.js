@@ -1,7 +1,6 @@
 const { describe, test, before, after } = require('node:test')
 const Fastify = require('fastify')
 const { OAuth2Server } = require('oauth2-mock-server')
-const fetch = require('cross-fetch')
 
 async function buildOAuthServer() {
   const server = new OAuth2Server()

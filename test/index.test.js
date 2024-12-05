@@ -1,5 +1,6 @@
 'use strict'
 
+const { describe, test, before, after, beforeEach, afterEach, mock } = require('node:test')
 const { readFileSync } = require('fs')
 const path = require('path')
 const fastify = require('fastify')
@@ -239,57 +240,63 @@ async function buildServer(options) {
 }
 
 describe('Options parsing', function () {
-  it('should enable RS256 when jwksUrl is present', async function () {
+  test('should enable RS256 when jwksUrl is present', async function (t) {
     const server = await buildServer({ jwksUrl: 'https://localhost/.well-known/jwks.json' })
 
-    expect(server.jwtJwks.verify.algorithms).toEqual(['RS256'])
+    t.assert.deepStrictEqual(server.jwtJwks.verify.algorithms, ['RS256'])
 
     server.close()
   })
 
-  it('should enable HS256 when the secret is present', async function () {
+  test('should enable HS256 when the secret is present', async function (t) {
     const server = await buildServer({ secret: 'secret' })
 
-    expect(server.jwtJwks.verify.algorithms).toEqual(['HS256'])
+    t.assert.deepStrictEqual(server.jwtJwks.verify.algorithms, ['HS256'])
 
     server.close()
   })
 
-  it('should enable both algorithms if both options are present', async function () {
+  test('should enable both algorithms if both options are present', async function (t) {
     const server = await buildServer({ jwksUrl: 'https://localhost/.well-known/jwks.json', secret: 'secret' })
 
-    expect(server.jwtJwks.verify.algorithms).toEqual(['RS256', 'HS256'])
+    t.assert.deepStrictEqual(server.jwtJwks.verify.algorithms, ['RS256', 'HS256'])
 
     server.close()
   })
 
-  it('should complain if neither jwksUrl or secret are present', async function () {
-    await expect(buildServer()).rejects.toThrow('Please provide at least one of the "jwksUrl" or "secret" options.')
+  test('should complain if neither jwksUrl or secret are present', async function (t) {
+    await t.assert.rejects(
+      () => buildServer(),
+      new Error('Please provide at least one of the "jwksUrl" or "secret" options.')
+    )
   })
 
-  it('should complain if forbidden options are present', async function () {
-    await expect(buildServer({ algorithms: 'whatever' })).rejects.toThrow('Option "algorithms" is not supported.')
+  test('should complain if forbidden options are present', async function (t) {
+    await t.assert.rejects(
+      () => buildServer({ algorithms: 'whatever' }),
+      new Error('Option "algorithms" is not supported.')
+    )
   })
 })
 
 describe('JWT token decoding', function () {
   let server
 
-  beforeAll(async function () {
+  before(async function (t) {
     server = await buildServer({ secret: 'secret' })
   })
 
-  afterAll(() => server.close())
+  after(() => server.close())
 
-  it('should decode a JWT token', async function () {
+  test('should decode a JWT token', async function (t) {
     const response = await server.inject({
       method: 'GET',
       url: '/decode',
       headers: { Authorization: `Bearer ${tokens.hs256Valid}` }
     })
 
-    expect(response.statusCode).toEqual(200)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), {
       regular: {
         admin: true,
         name: 'John Doe',
@@ -312,11 +319,11 @@ describe('JWT token decoding', function () {
     })
   })
 
-  it('should complain if the HTTP Authorization header is missing', async function () {
+  test('should complain if the HTTP Authorization header is missing', async function (t) {
     const response = await server.inject({ method: 'GET', url: '/decode' })
 
-    expect(response.statusCode).toEqual(401)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
       code: 'FST_JWT_NO_AUTHORIZATION_IN_HEADER',
       statusCode: 401,
       error: 'Unauthorized',
@@ -324,11 +331,11 @@ describe('JWT token decoding', function () {
     })
   })
 
-  it('should complain if the HTTP Authorization header is in the wrong format', async function () {
+  test('should complain if the HTTP Authorization header is in the wrong format', async function (t) {
     const response = await server.inject({ method: 'GET', url: '/decode', headers: { Authorization: 'FOO' } })
 
-    expect(response.statusCode).toEqual(401)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
       code: 'FST_JWT_NO_AUTHORIZATION_IN_HEADER',
       statusCode: 401,
       error: 'Unauthorized',
@@ -340,13 +347,13 @@ describe('JWT token decoding', function () {
 describe('JWT cookie token decoding', function () {
   let server
 
-  beforeAll(async function () {
+  before(async function (t) {
     server = await buildServer({ secret: 'secret', token: 'token', cookie: { cookieName: 'token' } })
   })
 
-  afterAll(() => server.close())
+  after(() => server.close())
 
-  it('should decode a JWT token from cookie', async function () {
+  test('should decode a JWT token from cookie', async function (t) {
     const response = await server.inject({
       method: 'GET',
       url: '/decode',
@@ -355,8 +362,8 @@ describe('JWT cookie token decoding', function () {
       }
     })
 
-    expect(response.statusCode).toEqual(200)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), {
       regular: {
         admin: true,
         name: 'John Doe',
@@ -379,11 +386,11 @@ describe('JWT cookie token decoding', function () {
     })
   })
 
-  it('should complain if the JWT token cookie is missing', async function () {
+  test('should complain if the JWT token cookie is missing', async function (t) {
     const response = await server.inject({ method: 'GET', url: '/decode', cookies: { foo: 'bar' } })
 
-    expect(response.statusCode).toEqual(401)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
       code: 'FST_JWT_NO_AUTHORIZATION_IN_COOKIE',
       statusCode: 401,
       error: 'Unauthorized',
@@ -391,11 +398,11 @@ describe('JWT cookie token decoding', function () {
     })
   })
 
-  it('should complain if the JWT token cookie is in the wrong format', async function () {
+  test('should complain if the JWT token cookie is in the wrong format', async function (t) {
     const response = await server.inject({ method: 'GET', url: '/decode', cookies: { foo: 'bar' } })
 
-    expect(response.statusCode).toEqual(401)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
       code: 'FST_JWT_NO_AUTHORIZATION_IN_COOKIE',
       statusCode: 401,
       error: 'Unauthorized',
@@ -407,7 +414,7 @@ describe('JWT cookie token decoding', function () {
 describe('Format decoded token', function () {
   let server
 
-  beforeAll(async function () {
+  before(async function (t) {
     server = await buildServer({
       secret: 'secret',
       token: 'token',
@@ -422,41 +429,41 @@ describe('Format decoded token', function () {
     })
   })
 
-  afterAll(() => server.close())
+  after(() => server.close())
 
-  it('should format verified user', async function () {
+  test('should format verified user', async function (t) {
     const response = await server.inject({
       method: 'GET',
       url: '/verify',
       headers: { Authorization: `Bearer ${tokens.hs256Valid}` }
     })
 
-    expect(response.statusCode).toEqual(200)
-    expect(response.json()).toEqual({ sub: '1234567890', username: 'John Doe', admin: true })
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), { sub: '1234567890', username: 'John Doe', admin: true })
   })
 })
 
 describe('HS256 JWT token validation', function () {
   let server
 
-  beforeEach(async function () {
+  beforeEach(async function (t) {
     server = await buildServer({ secret: 'secret' })
   })
 
   afterEach(() => server.close())
 
-  it('should make the token information available through request.user', async function () {
+  test('should make the token information available through request.user', async function (t) {
     const response = await server.inject({
       method: 'GET',
       url: '/verify',
       headers: { Authorization: `Bearer ${tokens.hs256Valid}` }
     })
 
-    expect(response.statusCode).toEqual(200)
-    expect(response.json()).toEqual({ sub: '1234567890', name: 'John Doe', admin: true })
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), { sub: '1234567890', name: 'John Doe', admin: true })
   })
 
-  it('should make the complete token information available through request.user', async function () {
+  test('should make the complete token information available through request.user', async function (t) {
     await server.close()
     server = await buildServer({ secret: 'secret', complete: true })
 
@@ -466,15 +473,15 @@ describe('HS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.hs256Valid}` }
     })
 
-    expect(response.statusCode).toEqual(200)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), {
       header: { alg: 'HS256', typ: 'JWT' },
       payload: { sub: '1234567890', name: 'John Doe', admin: true },
       signature: 'eNK_fimsCW3Q-meOXyc_dnZHubl2D4eZkIcn6llniCk'
     })
   })
 
-  it('should validate the issuer', async function () {
+  test('should validate the issuer', async function (t) {
     await server.close()
     server = await buildServer({ jwksUrl: 'localhost', secret: 'secret' })
 
@@ -484,8 +491,8 @@ describe('HS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.hs256ValidWithIssuer}` }
     })
 
-    expect(response.statusCode).toEqual(200)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), {
       sub: '1234567890',
       name: 'John Doe',
       admin: true,
@@ -493,7 +500,7 @@ describe('HS256 JWT token validation', function () {
     })
   })
 
-  it('should validate provided issuer', async function () {
+  test('should validate provided issuer', async function (t) {
     await server.close()
     server = await buildServer({ jwksUrl: 'localhost', secret: 'secret', issuer: 'foo' })
 
@@ -503,8 +510,8 @@ describe('HS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.hs256ValidWithProvidedIssuer}` }
     })
 
-    expect(response.statusCode).toEqual(200)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), {
       sub: '1234567890',
       name: 'John Doe',
       admin: true,
@@ -512,7 +519,7 @@ describe('HS256 JWT token validation', function () {
     })
   })
 
-  it('should validate multiple issuers', async function () {
+  test('should validate multiple issuers', async function (t) {
     await server.close()
     server = await buildServer({ jwksUrl: 'localhost', secret: 'secret', issuer: ['bar', 'foo', 'blah'] })
 
@@ -522,8 +529,8 @@ describe('HS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.hs256ValidWithProvidedIssuer}` }
     })
 
-    expect(response.statusCode).toEqual(200)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), {
       sub: '1234567890',
       name: 'John Doe',
       admin: true,
@@ -531,7 +538,7 @@ describe('HS256 JWT token validation', function () {
     })
   })
 
-  it('should validate the audience', async function () {
+  test('should validate the audience', async function (t) {
     await server.close()
     server = await buildServer({ audience: 'foo', secret: 'secret' })
 
@@ -541,11 +548,11 @@ describe('HS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.hs256ValidWithAudience}` }
     })
 
-    expect(response.statusCode).toEqual(200)
-    expect(response.json()).toEqual({ sub: '1234567890', name: 'John Doe', admin: true, aud: 'foo' })
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), { sub: '1234567890', name: 'John Doe', admin: true, aud: 'foo' })
   })
 
-  it('should validate the audience using the jwksUrl', async function () {
+  test('should validate the audience using the jwksUrl', async function (t) {
     await server.close()
     server = await buildServer({ jwksUrl: 'localhost', audience: true, secret: 'secret' })
 
@@ -555,8 +562,8 @@ describe('HS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.hs256ValidWithDomainAsAudience}` }
     })
 
-    expect(response.statusCode).toEqual(200)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), {
       sub: '1234567890',
       name: 'John Doe',
       admin: true,
@@ -565,16 +572,15 @@ describe('HS256 JWT token validation', function () {
     })
   })
 
-  it('should reject an invalid signature', async function () {
+  test('should reject an invalid signature', async function (t) {
     const response = await server.inject({
       method: 'GET',
       url: '/verify',
       headers: { Authorization: `Bearer ${tokens.hs256InvalidSignature}` }
     })
 
-    expect(response.statusCode).toEqual(401)
-
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
       code: 'FST_JWT_AUTHORIZATION_TOKEN_INVALID',
       statusCode: 401,
       error: 'Unauthorized',
@@ -586,7 +592,7 @@ describe('HS256 JWT token validation', function () {
 describe('RS256 JWT token validation', function () {
   let server
 
-  beforeEach(async function () {
+  beforeEach(async function (t) {
     server = await buildServer({ jwksUrl: 'https://localhost/.well-known/jwks.json' })
   })
 
@@ -602,15 +608,15 @@ describe('RS256 JWT token validation', function () {
     nock.enableNetConnect()
   })
 
-  it('should make the token informations available through request.user', async function () {
+  test('should make the token informations available through request.user', async function (t) {
     const response = await server.inject({
       method: 'GET',
       url: '/verify',
       headers: { Authorization: `Bearer ${tokens.rs256Valid}` }
     })
 
-    expect(response.statusCode).toEqual(200)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), {
       sub: '1234567890',
       name: 'John Doe',
       admin: true,
@@ -618,7 +624,7 @@ describe('RS256 JWT token validation', function () {
     })
   })
 
-  it('should make the complete token information available through request.user', async function () {
+  test('should make the complete token information available through request.user', async function (t) {
     await server.close()
     server = await buildServer({
       jwksUrl: 'https://localhost/.well-known/jwks.json',
@@ -631,8 +637,8 @@ describe('RS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.rs256Valid}` }
     })
 
-    expect(response.statusCode).toEqual(200)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), {
       header: {
         alg: 'RS256',
         kid: 'KEY',
@@ -649,7 +655,7 @@ describe('RS256 JWT token validation', function () {
     })
   })
 
-  it('should validate the audience', async function () {
+  test('should validate the audience', async function (t) {
     await server.close()
     server = await buildServer({
       jwksUrl: 'https://localhost/.well-known/jwks.json',
@@ -662,8 +668,8 @@ describe('RS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.rs256ValidWithAudience}` }
     })
 
-    expect(response.statusCode).toEqual(200)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), {
       sub: '1234567890',
       name: 'John Doe',
       admin: true,
@@ -672,7 +678,7 @@ describe('RS256 JWT token validation', function () {
     })
   })
 
-  it('should validate the audience using the jwksUrl', async function () {
+  test('should validate the audience using the jwksUrl', async function (t) {
     await server.close()
     server = await buildServer({
       jwksUrl: 'https://localhost/.well-known/jwks.json',
@@ -686,8 +692,8 @@ describe('RS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.rs256ValidWithDomainAsAudience}` }
     })
 
-    expect(response.statusCode).toEqual(200)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), {
       sub: '1234567890',
       name: 'John Doe',
       admin: true,
@@ -696,7 +702,7 @@ describe('RS256 JWT token validation', function () {
     })
   })
 
-  it('should validate with multiple audiences', async function () {
+  test('should validate with multiple audiences', async function (t) {
     await server.close()
     server = await buildServer({
       jwksUrl: 'https://localhost/.well-known/jwks.json',
@@ -710,8 +716,8 @@ describe('RS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.rs256ValidWithAudience}` }
     })
 
-    expect(response.statusCode).toEqual(200)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), {
       sub: '1234567890',
       name: 'John Doe',
       admin: true,
@@ -720,15 +726,15 @@ describe('RS256 JWT token validation', function () {
     })
   })
 
-  it('should reject an invalid signature', async function () {
+  test('should reject an invalid signature', async function (t) {
     const response = await server.inject({
       method: 'GET',
       url: '/verify',
       headers: { Authorization: `Bearer ${tokens.rs256InvalidSignature}` }
     })
 
-    expect(response.statusCode).toEqual(401)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
       code: 'FST_JWT_AUTHORIZATION_TOKEN_INVALID',
       statusCode: 401,
       error: 'Unauthorized',
@@ -736,22 +742,22 @@ describe('RS256 JWT token validation', function () {
     })
   })
 
-  it('should reject an invalid token', async function () {
+  test('should reject an invalid token', async function (t) {
     const response = await server.inject({
       method: 'GET',
       url: '/verify',
       headers: { Authorization: `Bearer ${tokens.hs256Valid}` }
     })
 
-    expect(response.statusCode).toEqual(401)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
       statusCode: 401,
       error: 'Unauthorized',
       message: 'Unsupported token.'
     })
   })
 
-  it('should reject a token when is not possible to retrieve the JWK set due to a HTTP error', async function () {
+  test('should reject a token when is not possible to retrieve the JWK set due to a HTTP error', async function (t) {
     nock.cleanAll()
 
     nock('https://localhost/').get('/.well-known/jwks.json').reply(404, { error: 'Not found.' })
@@ -762,30 +768,30 @@ describe('RS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.rs256Valid}` }
     })
 
-    expect(response.statusCode).toEqual(500)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 500)
+    t.assert.deepStrictEqual(response.json(), {
       statusCode: 500,
       error: 'Internal Server Error',
       message: 'Unable to get the JWS due to a HTTP error: [HTTP 404] {"error":"Not found."}'
     })
   })
 
-  it("should reject a token when the retrieved JWT set doesn't have the required key", async function () {
+  test("should reject a token when the retrieved JWT set doesn't have the required key", async function (t) {
     const response = await server.inject({
       method: 'GET',
       url: '/verify',
       headers: { Authorization: `Bearer ${tokens.rs256MissingKey}` }
     })
 
-    expect(response.statusCode).toEqual(401)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
       statusCode: 401,
       error: 'Unauthorized',
       message: 'Missing Key: Public key must be provided'
     })
   })
 
-  it('should reject a token when the retrieved JWT set returns an invalid key', async function () {
+  test('should reject a token when the retrieved JWT set returns an invalid key', async function (t) {
     nock.cleanAll()
 
     nock('https://localhost/')
@@ -806,8 +812,8 @@ describe('RS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.rs256Valid}` }
     })
 
-    expect(response.statusCode).toEqual(401)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
       code: 'FST_JWT_AUTHORIZATION_TOKEN_INVALID',
       statusCode: 401,
       error: 'Unauthorized',
@@ -815,7 +821,7 @@ describe('RS256 JWT token validation', function () {
     })
   })
 
-  it('should reject a token when is not possible to retrieve the JWK set due to a generic error', async function () {
+  test('should reject a token when is not possible to retrieve the JWK set due to a generic error', async function (t) {
     nock.cleanAll()
     nock.enableNetConnect()
 
@@ -825,16 +831,16 @@ describe('RS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.rs256Valid}` }
     })
 
-    expect(response.statusCode).toEqual(500)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 500)
+    t.assert.deepStrictEqual(response.json(), {
+      message: 'request to https://localhost/.well-known/jwks.json failed, reason: ',
       code: 'ECONNREFUSED',
       statusCode: 500,
-      error: 'Internal Server Error',
-      message: expect.stringMatching(/request to https:\/\/localhost\/.well-known\/jwks.json failed/)
+      error: 'Internal Server Error'
     })
   })
 
-  it('should cache the key and not it the well-known URL more than once', async function () {
+  test('should cache the key and not it the well-known URL more than once', async function (t) {
     let response
 
     response = await server.inject({
@@ -843,7 +849,7 @@ describe('RS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.rs256Valid}` }
     })
 
-    expect(response.statusCode).toEqual(200)
+    t.assert.deepStrictEqual(response.statusCode, 200)
 
     response = await server.inject({
       method: 'GET',
@@ -851,10 +857,10 @@ describe('RS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.rs256Valid}` }
     })
 
-    expect(response.statusCode).toEqual(200)
+    t.assert.deepStrictEqual(response.statusCode, 200)
   })
 
-  it('should correctly get the key again from the well-known URL if cache expired', async function () {
+  test('should correctly get the key again from the well-known URL if cache expired', async function (t) {
     await server.close()
     server = await buildServer({
       jwksUrl: 'https://localhost/.well-known/jwks.json',
@@ -870,7 +876,7 @@ describe('RS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.rs256Valid}` }
     })
 
-    expect(response.statusCode).toEqual(200)
+    t.assert.deepStrictEqual(response.statusCode, 200)
 
     await new Promise(resolve => setTimeout(resolve, 20))
 
@@ -882,16 +888,14 @@ describe('RS256 JWT token validation', function () {
 
     const body = response.json()
 
-    expect(response.statusCode).toEqual(500)
-    expect(body).toMatchObject({
-      statusCode: 500,
-      error: 'Internal Server Error'
-    })
+    t.assert.deepStrictEqual(response.statusCode, 500)
+    t.assert.deepStrictEqual(body.error, 'Internal Server Error')
+    t.assert.deepStrictEqual(body.statusCode, 500)
 
-    expect(body.message).toMatch(/Nock: No match for request/)
+    t.assert.match(body.message, /Nock: No match for request/)
   })
 
-  it('should not cache the key if cache was disabled', async function () {
+  test('should not cache the key if cache was disabled', async function (t) {
     await server.close()
     server = await buildServer({
       jwksUrl: 'https://localhost/.well-known/jwks.json',
@@ -907,7 +911,7 @@ describe('RS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.rs256Valid}` }
     })
 
-    expect(response.statusCode).toEqual(200)
+    t.assert.deepStrictEqual(response.statusCode, 200)
 
     response = await server.inject({
       method: 'GET',
@@ -917,16 +921,14 @@ describe('RS256 JWT token validation', function () {
 
     const body = response.json()
 
-    expect(response.statusCode).toEqual(500)
-    expect(body).toMatchObject({
-      statusCode: 500,
-      error: 'Internal Server Error'
-    })
+    t.assert.deepStrictEqual(response.statusCode, 500)
+    t.assert.deepStrictEqual(body.error, 'Internal Server Error')
+    t.assert.deepStrictEqual(body.statusCode, 500)
 
-    expect(body.message).toMatch(/Nock: No match for request/)
+    t.assert.match(body.message, /Nock: No match for request/)
   })
 
-  it('should not try to get the key twice when using caching if a previous attempt failed', async function () {
+  test('should not try to get the key twice when using caching if a previous attempt failed', async function (t) {
     let response
 
     response = await server.inject({
@@ -935,8 +937,8 @@ describe('RS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.rs256MissingKey}` }
     })
 
-    expect(response.statusCode).toEqual(401)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
       statusCode: 401,
       error: 'Unauthorized',
       message: 'Missing Key: Public key must be provided'
@@ -948,8 +950,8 @@ describe('RS256 JWT token validation', function () {
       headers: { Authorization: `Bearer ${tokens.rs256MissingKey}` }
     })
 
-    expect(response.statusCode).toEqual(401)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
       statusCode: 401,
       error: 'Unauthorized',
       message: 'Missing Key: Public key must be provided'
@@ -960,62 +962,62 @@ describe('RS256 JWT token validation', function () {
 describe('Server configured with the namespace option', function () {
   let server
 
-  afterAll(() => server.close())
+  after(() => server.close())
 
-  it('decorates the server with the correct function names', async function () {
+  test('decorates the server with the correct function names', async function (t) {
     server = await buildServer({ secret: 'secret', namespace: 'test' })
     // @fastify/jwt decorators
-    expect(server.hasRequestDecorator('jwtDecode')).toBe(false)
-    expect(server.hasRequestDecorator('jwtVerify')).toBe(false)
-    expect(server.hasRequestDecorator('testJwtDecode')).toBe(true)
-    expect(server.hasRequestDecorator('testJwtVerify')).toBe(true)
+    t.assert.deepStrictEqual(server.hasRequestDecorator('jwtDecode'), false)
+    t.assert.deepStrictEqual(server.hasRequestDecorator('jwtVerify'), false)
+    t.assert.deepStrictEqual(server.hasRequestDecorator('testJwtDecode'), true)
+    t.assert.deepStrictEqual(server.hasRequestDecorator('testJwtVerify'), true)
     // fastify-jwt-jwks decorators
-    expect(server.hasDecorator('authenticate')).toBe(false)
-    expect(server.hasDecorator('jwtJwks')).toBe(false)
-    expect(server.hasRequestDecorator('jwtJwks')).toBe(false)
-    expect(server.hasRequestDecorator('jwtJwksSecretsCache')).toBe(false)
-    expect(server.hasDecorator('testAuthenticate')).toBe(true)
-    expect(server.hasDecorator('testJwtJwks')).toBe(true)
-    expect(server.hasRequestDecorator('testJwtJwks')).toBe(true)
-    expect(server.hasRequestDecorator('testJwtJwksSecretsCache')).toBe(true)
+    t.assert.deepStrictEqual(server.hasDecorator('authenticate'), false)
+    t.assert.deepStrictEqual(server.hasDecorator('jwtJwks'), false)
+    t.assert.deepStrictEqual(server.hasRequestDecorator('jwtJwks'), false)
+    t.assert.deepStrictEqual(server.hasRequestDecorator('jwtJwksSecretsCache'), false)
+    t.assert.deepStrictEqual(server.hasDecorator('testAuthenticate'), true)
+    t.assert.deepStrictEqual(server.hasDecorator('testJwtJwks'), true)
+    t.assert.deepStrictEqual(server.hasRequestDecorator('testJwtJwks'), true)
+    t.assert.deepStrictEqual(server.hasRequestDecorator('testJwtJwksSecretsCache'), true)
   })
 })
 
 describe('General error handling', function () {
   let server
 
-  beforeEach(async function () {
+  beforeEach(async function (t) {
     server = await buildServer({ secret: 'secret' })
   })
 
   afterEach(() => server.close())
 
-  it('should complain if the HTTP Authorization header is missing', async function () {
+  test('should complain if the HTTP Authorization header is missing', async function (t) {
     const response = await server.inject({ method: 'GET', url: '/verify' })
-    expect(response.statusCode).toEqual(401)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
       statusCode: 401,
       error: 'Unauthorized',
       message: 'Missing Authorization HTTP header.'
     })
   })
 
-  it('should complain if the HTTP Authorization header is in the wrong format', async function () {
+  test('should complain if the HTTP Authorization header is in the wrong format', async function (t) {
     const response = await server.inject({ method: 'GET', url: '/verify', headers: { Authorization: 'FOO' } })
 
-    expect(response.statusCode).toEqual(401)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
       statusCode: 401,
       error: 'Unauthorized',
       message: 'Missing Authorization HTTP header.'
     })
   })
 
-  it('should complain if the JWT token is malformed', async function () {
+  test('should complain if the JWT token is malformed', async function (t) {
     const response = await server.inject({ method: 'GET', url: '/verify', headers: { Authorization: 'Bearer FOO' } })
 
-    expect(response.statusCode).toEqual(401)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
       code: 'FST_JWT_AUTHORIZATION_TOKEN_INVALID',
       statusCode: 401,
       error: 'Unauthorized',
@@ -1023,37 +1025,37 @@ describe('General error handling', function () {
     })
   })
 
-  it('should complain if the JWT token has an unsupported algorithm', async function () {
+  test('should complain if the JWT token has an unsupported algorithm', async function (t) {
     const response = await server.inject({
       method: 'GET',
       url: '/verify',
       headers: { Authorization: `Bearer ${tokens.unsupportedAlgorithm}` }
     })
 
-    expect(response.statusCode).toEqual(401)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
       statusCode: 401,
       error: 'Unauthorized',
       message: 'The token algorithm is invalid.'
     })
   })
 
-  it('should complain if the JWT token has expired', async function () {
+  test('should complain if the JWT token has expired', async function (t) {
     const response = await server.inject({
       method: 'GET',
       url: '/verify',
       headers: { Authorization: `Bearer ${tokens.expired}` }
     })
 
-    expect(response.statusCode).toEqual(401)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
       statusCode: 401,
       error: 'Unauthorized',
       message: 'Expired token.'
     })
   })
 
-  it('should complain if the JWT token has an invalid issuer', async function () {
+  test('should complain if the JWT token has an invalid issuer', async function (t) {
     await server.close()
     server = await buildServer({ jwksUrl: 'foo', secret: 'secret' })
 
@@ -1063,8 +1065,8 @@ describe('General error handling', function () {
       headers: { Authorization: `Bearer ${tokens.invalidIssuer}` }
     })
 
-    expect(response.statusCode).toEqual(401)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
       code: 'FST_JWT_AUTHORIZATION_TOKEN_INVALID',
       statusCode: 401,
       error: 'Unauthorized',
@@ -1072,7 +1074,7 @@ describe('General error handling', function () {
     })
   })
 
-  it('should complain if the JWT token has an invalid audience', async function () {
+  test('should complain if the JWT token has an invalid audience', async function (t) {
     await server.close()
     server = await buildServer({ audience: 'foo', secret: 'secret' })
 
@@ -1082,8 +1084,8 @@ describe('General error handling', function () {
       headers: { Authorization: `Bearer ${tokens.invalidAudience}` }
     })
 
-    expect(response.statusCode).toEqual(401)
-    expect(response.json()).toEqual({
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
       code: 'FST_JWT_AUTHORIZATION_TOKEN_INVALID',
       statusCode: 401,
       error: 'Unauthorized',
@@ -1093,27 +1095,15 @@ describe('General error handling', function () {
 })
 
 describe('Cleanup', function () {
-  it('should close the cache when the server stops', function (done) {
-    jest.resetModules()
-    expect.assertions(1)
+  test('should close the cache when the server stops', function (t, done) {
+    const NodeCache = require('node-cache')
 
-    const mockCache = {
-      close: jest.fn()
-    }
-
-    jest.doMock(
-      'node-cache',
-      jest.fn().mockImplementation(
-        () =>
-          function NodeCache() {
-            return mockCache
-          }
-      )
-    )
+    const mockClose = mock.fn()
+    NodeCache.prototype.close = mockClose
 
     buildServer({ secret: 'secret' }).then(server => {
       server.close(() => {
-        expect(mockCache.close).toHaveBeenCalled()
+        t.assert.deepStrictEqual(mockClose.mock.callCount(), 1)
         done()
       })
     }, done)

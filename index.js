@@ -98,7 +98,7 @@ async function getRemoteSecret(jwksUrl, alg, kid, cache) {
     }
 
     // Hit the well-known URL in order to get the key
-    const response = await fetch(jwksUrl, { signal: AbortController.timeout(5000) })
+    const response = await fetch(jwksUrl, { signal: AbortSignal.timeout(5000) })
 
     const body = await response.json()
 

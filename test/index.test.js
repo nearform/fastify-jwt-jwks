@@ -830,8 +830,7 @@ describe('RS256 JWT token validation', function () {
 
     t.assert.deepStrictEqual(response.statusCode, 500)
     t.assert.deepStrictEqual(response.json(), {
-      message: 'request to https://localhost/.well-known/jwks.json failed, reason: ',
-      code: 'ECONNREFUSED',
+      message: 'fetch failed',
       statusCode: 500,
       error: 'Internal Server Error'
     })
@@ -885,9 +884,9 @@ describe('RS256 JWT token validation', function () {
 
     const body = response.json()
 
-    t.assert.deepStrictEqual(response.statusCode, 500)
-    t.assert.deepStrictEqual(body.error, 'Internal Server Error')
-    t.assert.deepStrictEqual(body.statusCode, 500)
+    t.assert.deepStrictEqual(response.statusCode, 404)
+    t.assert.deepStrictEqual(body.error, 'Not Found')
+    t.assert.deepStrictEqual(body.statusCode, 404)
 
     t.assert.match(body.message, /Nock: No match for request/)
   })
@@ -918,9 +917,9 @@ describe('RS256 JWT token validation', function () {
 
     const body = response.json()
 
-    t.assert.deepStrictEqual(response.statusCode, 500)
-    t.assert.deepStrictEqual(body.error, 'Internal Server Error')
-    t.assert.deepStrictEqual(body.statusCode, 500)
+    t.assert.deepStrictEqual(response.statusCode, 404)
+    t.assert.deepStrictEqual(body.error, 'Not Found')
+    t.assert.deepStrictEqual(body.statusCode, 404)
 
     t.assert.match(body.message, /Nock: No match for request/)
   })

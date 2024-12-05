@@ -175,7 +175,7 @@ function fastifyJwtJwks(instance, options, done) {
         .catch(cb)
     }
 
-    async function authenticate(request, reply) {
+    async function authenticate(request) {
       try {
         await request[verifyFunctionName]()
       } catch (e) {

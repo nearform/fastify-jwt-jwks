@@ -3,7 +3,6 @@
 const { Unauthorized, InternalServerError } = require('http-errors')
 const fastifyPlugin = require('fastify-plugin')
 const fastifyJwt = require('@fastify/jwt')
-const fetch = require('node-fetch')
 const NodeCache = require('node-cache')
 const { createPublicKey } = require('node:crypto')
 
@@ -99,7 +98,7 @@ async function getRemoteSecret(jwksUrl, alg, kid, cache) {
     }
 
     // Hit the well-known URL in order to get the key
-    const response = await fetch(jwksUrl, { timeout: 5000 })
+    const response = await fetch(jwksUrl, { signal: AbortController.timeout(5000) })
 
     const body = await response.json()
 

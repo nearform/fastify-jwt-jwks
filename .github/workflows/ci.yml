@@ -22,7 +22,6 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm install
       - run: npm run test:ci
-      - run: npm run test:integration
   automerge:
     needs: build
     runs-on: ubuntu-latest

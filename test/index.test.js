@@ -443,7 +443,7 @@ describe('Format decoded token', function () {
 describe('HS256 JWT token validation', function () {
   let server
 
-  beforeEach(async function (t) {
+  beforeEach(async function () {
     server = await buildServer({ secret: 'secret' })
   })
 
@@ -589,7 +589,7 @@ describe('HS256 JWT token validation', function () {
 describe('RS256 JWT token validation', function () {
   let server
 
-  beforeEach(async function (t) {
+  beforeEach(async function () {
     server = await buildServer({ jwksUrl: 'https://localhost/.well-known/jwks.json' })
   })
 
@@ -982,7 +982,7 @@ describe('Server configured with the namespace option', function () {
 describe('General error handling', function () {
   let server
 
-  beforeEach(async function (t) {
+  beforeEach(async function () {
     server = await buildServer({ secret: 'secret' })
   })
 

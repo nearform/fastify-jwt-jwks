@@ -463,16 +463,18 @@ describe('HS256 JWT token validation', function () {
   test('should make the complete token information available through request.user', async function (t) {
     await server.close()
     server = await buildServer({ secret: 'secret', complete: true })
+    const token = tokens.hs256Valid
 
     const response = await server.inject({
       method: 'GET',
       url: '/verify',
-      headers: { Authorization: `Bearer ${tokens.hs256Valid}` }
+      headers: { Authorization: `Bearer ${token}` }
     })
 
     t.assert.deepStrictEqual(response.statusCode, 200)
     t.assert.deepStrictEqual(response.json(), {
       header: { alg: 'HS256', typ: 'JWT' },
+      input: token.split('.').slice(0, 2).join('.'),
       payload: { sub: '1234567890', name: 'John Doe', admin: true },
       signature: 'eNK_fimsCW3Q-meOXyc_dnZHubl2D4eZkIcn6llniCk'
     })
@@ -627,11 +629,12 @@ describe('RS256 JWT token validation', function () {
       jwksUrl: 'https://localhost/.well-known/jwks.json',
       complete: true
     })
+    const token = tokens.rs256Valid
 
     const response = await server.inject({
       method: 'GET',
       url: '/verify',
-      headers: { Authorization: `Bearer ${tokens.rs256Valid}` }
+      headers: { Authorization: `Bearer ${token}` }
     })
 
     t.assert.deepStrictEqual(response.statusCode, 200)
@@ -647,6 +650,7 @@ describe('RS256 JWT token validation', function () {
         admin: true,
         iss: 'https://localhost/'
       },
+      input: token.split('.').slice(0, 2).join('.'),
       signature:
         'HYgGxrwl3vthMChCy44eg-VK0x_SR-mf6761VI9jNk9rMqKZmFcabE7dVUA_hCKFXyj7VL7bJ09i3PxYFkj78PMz28B9hZz_h4ntVuafPmDL9FCHvW91oZTJRhosNor2yyUFcx6ijfu6WeUTZRtQdBqvcAgtKutNl9H0Q0wff-Jn10ViiFJTEmiaC-XhoZFjZQee7_bS7mOZtJCZeH69D_CWrCf4I-N2nl8U1sVHp-H0fRCc5D5SvlIhCsIXYJoFDRAuTtRvwrXXVPlIPugCeJ8l91S-GbIEEUejDCE8JPW9bEGfKoAFBiIbnRBSb4hKEbdFUqWHk-5_YOLzvPnq57vlCB8yeC10exEgiSeSb74tXGZyB4z540Mjt-2k9O9t7Uz1ICDZHvrYLUN2wzlSKqSucOvr5YpH8y-iLaWqAQeiR2b6w0u_c9kMEgzCAaobJp4QxjGkKHfYNmUFlV1uoY5_I2CBls-ICr0_E9PicMBnddg_JG8KabqAmZObCrkM5WRxSPPNLTElmw80MACxFqgaKxsMg-6uqmgTwy9ie9TjYVVdL1pdxWWaLDhzpDN1mmdTuIazfnSaib7PnzgPPgHlN7TnSCmCnYzffAg-i2Fz8JOhiK50mF86hc8n6em6K7cbVLm0nQcA4249D88Um9KBs8AoPXov8HGAS4Khwhk'
     })

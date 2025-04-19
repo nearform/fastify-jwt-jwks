@@ -70,7 +70,7 @@ export interface JwtJwks extends Pick<FastifyJwtJwksOptions, 'jwksUrl' | 'audien
   }
 }
 
-export type Authenticate = (request: FastifyRequest, reply: FastifyReply) => Promise<void>
+export type Authenticate = (request: FastifyRequest) => Promise<void>
 
 /**
  * JWT JWKS verification plugin for Fastify, internally uses @fastify/jwt and jsonwebtoken.

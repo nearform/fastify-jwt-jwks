@@ -35,6 +35,10 @@
   },
   "main": "index.js",
   "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
   "scripts": {
     "test": "node --test",
     "test:ci": "npm run lint && npm run test && npm run test:types",

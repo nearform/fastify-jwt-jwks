@@ -59,6 +59,7 @@ function verifyOptions(options) {
     jwksUrlOrigin = jwksUrlObject.origin + '/'
 
     verify.algorithms.push('RS256')
+    verify.algorithms.push('EdDSA')
     // @TODO normalize issuer url like done for jwksUrl
     verify.allowedIss = issuer || jwksUrlOrigin
 

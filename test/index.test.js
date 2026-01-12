@@ -12,6 +12,11 @@ How to regenerate the keys for RS256:
 
 ssh-keygen -t rsa -b 4096 -m PEM -f private.key
 openssl req -x509 -new -key private.key -out public.key -subj "/CN=unused"
+
+and for EdDSA:
+openssl genpkey -algorithm Ed25519 -out private-ed25519.pem
+openssl req -x509 -new -key private-ed25519.pem -out ed25519-cert.pem -subj "/CN=unused"
+openssl pkey -in private-ed25519.pem -pubout -out public-ed25519.pem
 */
 
 const jwks = {
@@ -87,6 +92,14 @@ const jwks = {
       lXoKOhH7jk9Nis2d2i+ktNy0IMQdWsV75FP+yE3CWTl10bMvCvccg0B1dVmxAbDZ
       h7b8BjRiGIgwqVjdclzAy0sVMZHquiFvoiE78n5rndcI9jtzx0Ub`.trim()
       ]
+    },
+    {
+      kty: 'OKP',
+      use: 'sig',
+      alg: 'EdDSA',
+      kid: 'KEY_2',
+      crv: 'Ed25519',
+      x: 'FmGAhUoWVYNTncU95-MLKG3t76q0g5UCkepOpWPotvw'
     }
   ]
 }
@@ -205,6 +218,35 @@ const tokens = {
   rs256MissingKey:
     'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IkFOT1RIRVItS0VZIn0.eyJwYXlsb2FkIjp7InN1YiI6IjEyMzQ1Njc4OTAiLCJuYW1lIjoiSm9obiBEb2UiLCJhZG1pbiI6dHJ1ZSwiaXNzIjoiaHR0cHM6Ly9sb2NhbGhvc3QvIiwiYXVkIjoiaHR0cHM6Ly9sb2NhbGhvc3QvIn19.jZrn8F1RClAbb4P1JJR0XJ0KTw0U7DqQEd098AQhxjojb-6BfGwxABn-hIrFeQhDPs1-RtzCfoRJ0WvA40UoqAPf071gdlB5FFq95lUO_9B8XXby0ueUe-RdlqMkP3HvukLLFhQW481zBEVAyp8xSz-P1LsYHk6avCA1lAGMKZoh6FOsoE-cyBMKF0koc2MWUPvu6BYr48gyX50QKBr_yrSdfLgQj67tcMicvESddwZX1ggr7eF4ZeHXVZV_F_AMkOywiEkiS4EvC2gywNJkbIz3eLqsQFYYzUhMsQfu5x-YfSw3-pmEtw7SQZ-QeP2zs1sZP0tcJJ03ya-dcG1E7IindR1eAoji6CYtRElF0DMsIgV-Cd6NB1Vx5R-Le15MROuvArGisJKOlHYf79g1-1hWC5LAtQ0eAR5gkeRRX6UjUL_kCMVtf69qed74mq-nA4P2BNW72CL9SzjPwmNeUVfGdui10NLMt9QAs8jcYksgeMiMoQW6NVvsc9ptKmynmTJzCEP1s-Jgv0erMIIe5_mU9YnihZHJ19dL7BDvg0YV_tP3i6vRXqJsYBx43YPKMwiI5OKRSregfRLvq66JSlL7k2hfIVRLhJc-tvaxoeewDJc1qksc-qgsBWwQ7lVpQlj_mBbmzujXmj99nQJfqpV9iPS5WPPCbtJTeTlXcP8',
 
+  edDSAValid: generateToken(
+    {
+      key: readFileSync(`${path.join(__dirname, 'keys')}/private-ed25519.pem`, 'utf8'),
+      noTimestamp: true,
+      iss: 'https://localhost/',
+      kid: 'KEY_2'
+    },
+    {
+      admin: true,
+      name: 'John Doe',
+      sub: '1234567890'
+    }
+  ),
+
+  edDSAInvalidSignature:
+    generateToken(
+      {
+        key: readFileSync(`${path.join(__dirname, 'keys')}/private-ed25519.pem`, 'utf8'),
+        noTimestamp: true,
+        iss: 'https://localhost/',
+        kid: 'KEY_2'
+      },
+      {
+        admin: true,
+        name: 'John Doe',
+        sub: '1234567890'
+      }
+    ) + '-INVALID',
+
   unsupportedAlgorithm:
     'eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.nZU_gPcMXkWpkCUpJceSxS7lSickF0tTImHhAR949Z-Nt69LgW8G6lid-mqd9B579tYM8C4FN2jdhR2VRMsjtA',
   expired:
@@ -242,10 +284,10 @@ async function buildServer(options) {
 }
 
 describe('Options parsing', function () {
-  test('should enable RS256 when jwksUrl is present', async function (t) {
+  test('should enable RS256 and EdDSA when jwksUrl is present', async function (t) {
     const server = await buildServer({ jwksUrl: 'https://localhost/.well-known/jwks.json' })
 
-    t.assert.deepStrictEqual(server.jwtJwks.verify.algorithms, ['RS256'])
+    t.assert.deepStrictEqual(server.jwtJwks.verify.algorithms, ['RS256', 'EdDSA'])
 
     server.close()
   })
@@ -258,10 +300,10 @@ describe('Options parsing', function () {
     server.close()
   })
 
-  test('should enable both algorithms if both options are present', async function (t) {
+  test('should enable RS256, HS256 and EdDSA algorithms if both options are present', async function (t) {
     const server = await buildServer({ jwksUrl: 'https://localhost/.well-known/jwks.json', secret: 'secret' })
 
-    t.assert.deepStrictEqual(server.jwtJwks.verify.algorithms, ['RS256', 'HS256'])
+    t.assert.deepStrictEqual(server.jwtJwks.verify.algorithms, ['RS256', 'EdDSA', 'HS256'])
 
     server.close()
   })
@@ -1002,6 +1044,58 @@ describe('RS256 JWT token validation', function () {
 
     // public / private key pairs aren't supported for signing
     t.assert.deepStrictEqual(response.statusCode, 500)
+  })
+})
+
+describe('EdDSA JWT token validation', function () {
+  let server
+
+  beforeEach(async function () {
+    server = await buildServer({ jwksUrl: 'https://localhost/.well-known/jwks.json' })
+  })
+
+  afterEach(() => server.close())
+
+  beforeEach(function () {
+    nock.disableNetConnect()
+    nock('https://localhost/').get('/.well-known/jwks.json').reply(200, jwks)
+  })
+
+  afterEach(() => {
+    nock.cleanAll()
+    nock.enableNetConnect()
+  })
+
+  test('should make the token informations available through request.user', async function (t) {
+    const response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.edDSAValid}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), {
+      sub: '1234567890',
+      name: 'John Doe',
+      admin: true,
+      iss: 'https://localhost/'
+    })
+  })
+
+  test('should reject an invalid signature', async function (t) {
+    const response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.edDSAInvalidSignature}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
+      code: 'FST_JWT_AUTHORIZATION_TOKEN_INVALID',
+      statusCode: 401,
+      error: 'Unauthorized',
+      message: 'Authorization token is invalid: The token signature is invalid.'
+    })
   })
 })
 

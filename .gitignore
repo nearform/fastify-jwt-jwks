@@ -1,6 +1,53 @@
-coverage
-node_modules
-.vscode
-package-lock.json
+# Coverage and test output
+coverage/
+
+# Dependencies
+node_modules/
+
+# Build output
+build/
+dist/
+lib/
+out/
+*.tsbuildinfo
+
+# Logs and runtime files
+*.log
+*.pid
+*.pid.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
 .env
+.env.*
+!.env.example
+
+# Tooling caches
+.cache/
+.eslintcache
+.npm/
+.pnpm-store/
+.parcel-cache/
+.turbo/
+
+# Editor settings
 .idea/
+.vscode/
+*.swp
+*.swo
+
+# Project-specific choice
+package-lock.json
+
+# macOS filesystem metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+Icon?

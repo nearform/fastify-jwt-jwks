@@ -586,6 +586,15 @@ describe('HS256 JWT token validation', function () {
       message: 'Authorization token is invalid: The token signature is invalid.'
     })
   })
+
+  test('should support jwt.verify on fastify instance', async function (t) {
+    const payload = await server.jwt.verify(tokens.hs256Valid)
+    t.assert.deepStrictEqual(payload, {
+      admin: true,
+      name: 'John Doe',
+      sub: '1234567890'
+    })
+  })
 })
 
 describe('RS256 JWT token validation', function () {
@@ -957,6 +966,16 @@ describe('RS256 JWT token validation', function () {
       message: 'Missing Key: Public key must be provided'
     })
   })
+
+  test('should support jwt.verify on fastify instance', async function (t) {
+    const payload = await server.jwt.verify(tokens.rs256Valid)
+    t.assert.deepStrictEqual(payload, {
+      admin: true,
+      iss: 'https://localhost/',
+      name: 'John Doe',
+      sub: '1234567890'
+    })
+  })
 })
 
 describe('Server configured with the namespace option', function () {
@@ -975,11 +994,9 @@ describe('Server configured with the namespace option', function () {
     t.assert.deepStrictEqual(server.hasDecorator('authenticate'), false)
     t.assert.deepStrictEqual(server.hasDecorator('jwtJwks'), false)
     t.assert.deepStrictEqual(server.hasRequestDecorator('jwtJwks'), false)
-    t.assert.deepStrictEqual(server.hasRequestDecorator('jwtJwksSecretsCache'), false)
     t.assert.deepStrictEqual(server.hasDecorator('testAuthenticate'), true)
     t.assert.deepStrictEqual(server.hasDecorator('testJwtJwks'), true)
     t.assert.deepStrictEqual(server.hasRequestDecorator('testJwtJwks'), true)
-    t.assert.deepStrictEqual(server.hasRequestDecorator('testJwtJwksSecretsCache'), true)
   })
 })
 

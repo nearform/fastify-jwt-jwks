@@ -16,7 +16,8 @@ const errorMessages = {
   jwksHttpError: 'Unable to get the JWS due to a HTTP error',
   missingHeader: 'Missing Authorization HTTP header.',
   missingKey: 'Missing Key: Public key must be provided',
-  missingOptions: 'Please provide at least one of the "jwksUrl" or "secret" options.'
+  missingOptions: 'Please provide at least one of the "jwksUrl" or "secret" options.',
+  unexpectedContext: 'Unexpected context: getSecret called outside known fastify contexts.'
 }
 
 const fastifyJwtErrors = [
@@ -152,22 +153,48 @@ function fastifyJwtJwks(instance, options, done) {
     const verifyFunctionName = namespace ? `${namespace}JwtVerify` : 'jwtVerify'
     const authenticateMethodName = namespace ? `${namespace}Authenticate` : 'authenticate'
     const jwksOptionsName = namespace ? `${namespace}JwtJwks` : 'jwtJwks'
-    const secretsCacheName = namespace ? `${namespace}JwtJwksSecretsCache` : 'jwtJwksSecretsCache'
 
-    function getSecret(request, reply, cb) {
-      request[decodeFunctionName]({ decode: { complete: true } })
-        .then(decoded => {
-          const { header } = decoded
+    function getHeader(requestOrToken) {
+      const isRequest = typeof requestOrToken[verifyFunctionName] === 'function'
+
+      if (isRequest) {
+        return requestOrToken[decodeFunctionName]({ decode: { complete: true } })
+          .then(decoded => decoded.header)
+          .catch(() => {
+            throw new Unauthorized(errorMessages.invalidToken)
+          })
+      } else {
+        const isDecodedToken = !!requestOrToken.header
+        if (isDecodedToken) {
+          return Promise.resolve(requestOrToken.header)
+        } else {
+          throw new InternalServerError(errorMessages.unexpectedContext)
+        }
+      }
+    }
+
+    function getSecret(requestOrToken, reply, cb) {
+      if (cb === undefined) {
+        cb = reply
+        reply = null
+      }
+
+      // due to a bug in @fastify/jwt, the getSecret function is called with two different signatures
+      // either with a fastify request object or with a decoded token,
+      // getHeader handles both cases and extracts the header
+      // see https://github.com/fastify/fastify-jwt/issues/388
+      getHeader(requestOrToken)
+        .then(header => {
           // If the algorithm is not using RS256, the encryption key is jwt client secret
           if (header.alg.startsWith('HS')) {
-            if (!request[jwksOptionsName].secret) {
+            if (!instance[jwksOptionsName].secret) {
               throw new Unauthorized(errorMessages.invalidAlgorithm)
             }
-            return cb(null, request[jwksOptionsName].secret)
+            return cb(null, instance[jwksOptionsName].secret)
           }
 
           // If the algorithm is RS256, get the key remotely using a well-known URL containing a JWK set
-          getRemoteSecret(request[jwksOptionsName].jwksUrl, header.alg, header.kid, request[secretsCacheName])
+          getRemoteSecret(instance[jwksOptionsName].jwksUrl, header.alg, header.kid, cache)
             .then(key => cb(null, key))
             .catch(cb)
         })
@@ -214,13 +241,9 @@ function fastifyJwtJwks(instance, options, done) {
       getter: () => jwtJwksOptions
     })
 
+    // Create a cache or a fake cache
     const cache =
       ttl > 0 ? new NodeCache({ stdTTL: ttl }) : { get: () => undefined, set: () => false, close: () => undefined }
-
-    // Create a cache or a fake cache
-    instance.decorateRequest(secretsCacheName, {
-      getter: () => cache
-    })
 
     instance.addHook('onClose', () => cache.close())
 

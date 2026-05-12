@@ -231,6 +231,11 @@ async function buildServer(options) {
     }
   })
 
+  server.get('/sign', { preValidation: server.authenticate }, async (req, reply) => {
+    const token = await reply.jwtSign(req.user, { noTimestamp: true })
+    return reply.send({ token })
+  })
+
   await server.listen({ port: 0 })
 
   return server
@@ -594,6 +599,17 @@ describe('HS256 JWT token validation', function () {
       name: 'John Doe',
       sub: '1234567890'
     })
+  })
+
+  test('should support signing', async function (t) {
+    const response = await server.inject({
+      method: 'GET',
+      url: '/sign',
+      headers: { Authorization: `Bearer ${tokens.hs256Valid}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json().token, tokens.hs256Valid)
   })
 })
 
@@ -975,6 +991,17 @@ describe('RS256 JWT token validation', function () {
       name: 'John Doe',
       sub: '1234567890'
     })
+  })
+
+  test('should not support signing', async function (t) {
+    const response = await server.inject({
+      method: 'GET',
+      url: '/sign',
+      headers: { Authorization: `Bearer ${tokens.rs256Valid}` }
+    })
+
+    // public / private key pairs aren't supported for signing
+    t.assert.deepStrictEqual(response.statusCode, 500)
   })
 })
 

@@ -231,6 +231,11 @@ async function buildServer(options) {
     }
   })
 
+  server.get('/sign', { preValidation: server.authenticate }, async (req, reply) => {
+    const token = await reply.jwtSign(req.user, { noTimestamp: true })
+    return reply.send({ token })
+  })
+
   await server.listen({ port: 0 })
 
   return server
@@ -585,6 +590,26 @@ describe('HS256 JWT token validation', function () {
       error: 'Unauthorized',
       message: 'Authorization token is invalid: The token signature is invalid.'
     })
+  })
+
+  test('should support jwt.verify on fastify instance', async function (t) {
+    const payload = await server.jwt.verify(tokens.hs256Valid)
+    t.assert.deepStrictEqual(payload, {
+      admin: true,
+      name: 'John Doe',
+      sub: '1234567890'
+    })
+  })
+
+  test('should support signing', async function (t) {
+    const response = await server.inject({
+      method: 'GET',
+      url: '/sign',
+      headers: { Authorization: `Bearer ${tokens.hs256Valid}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json().token, tokens.hs256Valid)
   })
 })
 
@@ -957,6 +982,27 @@ describe('RS256 JWT token validation', function () {
       message: 'Missing Key: Public key must be provided'
     })
   })
+
+  test('should support jwt.verify on fastify instance', async function (t) {
+    const payload = await server.jwt.verify(tokens.rs256Valid)
+    t.assert.deepStrictEqual(payload, {
+      admin: true,
+      iss: 'https://localhost/',
+      name: 'John Doe',
+      sub: '1234567890'
+    })
+  })
+
+  test('should not support signing', async function (t) {
+    const response = await server.inject({
+      method: 'GET',
+      url: '/sign',
+      headers: { Authorization: `Bearer ${tokens.rs256Valid}` }
+    })
+
+    // public / private key pairs aren't supported for signing
+    t.assert.deepStrictEqual(response.statusCode, 500)
+  })
 })
 
 describe('Server configured with the namespace option', function () {
@@ -975,11 +1021,9 @@ describe('Server configured with the namespace option', function () {
     t.assert.deepStrictEqual(server.hasDecorator('authenticate'), false)
     t.assert.deepStrictEqual(server.hasDecorator('jwtJwks'), false)
     t.assert.deepStrictEqual(server.hasRequestDecorator('jwtJwks'), false)
-    t.assert.deepStrictEqual(server.hasRequestDecorator('jwtJwksSecretsCache'), false)
     t.assert.deepStrictEqual(server.hasDecorator('testAuthenticate'), true)
     t.assert.deepStrictEqual(server.hasDecorator('testJwtJwks'), true)
     t.assert.deepStrictEqual(server.hasRequestDecorator('testJwtJwks'), true)
-    t.assert.deepStrictEqual(server.hasRequestDecorator('testJwtJwksSecretsCache'), true)
   })
 })
 

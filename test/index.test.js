@@ -97,7 +97,7 @@ const jwks = {
       kty: 'OKP',
       use: 'sig',
       alg: 'EdDSA',
-      kid: 'KEY_2',
+      kid: 'KEY_EdDSA',
       crv: 'Ed25519',
       x: 'FmGAhUoWVYNTncU95-MLKG3t76q0g5UCkepOpWPotvw'
     }
@@ -223,7 +223,7 @@ const tokens = {
       key: readFileSync(`${path.join(__dirname, 'keys')}/private-ed25519.pem`, 'utf8'),
       noTimestamp: true,
       iss: 'https://localhost/',
-      kid: 'KEY_2'
+      kid: 'KEY_EdDSA'
     },
     {
       admin: true,
@@ -232,13 +232,41 @@ const tokens = {
     }
   ),
 
+  edDSAValidWithAudience: generateToken(
+    {
+      key: readFileSync(`${path.join(__dirname, 'keys')}/private-ed25519.pem`, 'utf8'),
+      noTimestamp: true,
+      iss: 'https://localhost/',
+      aud: 'foo',
+      kid: 'KEY_EdDSA'
+    },
+    {
+      admin: true,
+      name: 'John Doe',
+      sub: '1234567890'
+    }
+  ),
+  edDSAValidWithDomainAsAudience: generateToken(
+    {
+      key: readFileSync(`${path.join(__dirname, 'keys')}/private-ed25519.pem`, 'utf8'),
+      noTimestamp: true,
+      iss: 'https://localhost/',
+      aud: 'https://localhost/',
+      kid: 'KEY_EdDSA'
+    },
+    {
+      admin: true,
+      name: 'John Doe',
+      sub: '1234567890'
+    }
+  ),
   edDSAInvalidSignature:
     generateToken(
       {
         key: readFileSync(`${path.join(__dirname, 'keys')}/private-ed25519.pem`, 'utf8'),
         noTimestamp: true,
         iss: 'https://localhost/',
-        kid: 'KEY_2'
+        kid: 'KEY_EdDSA'
       },
       {
         admin: true,
@@ -246,6 +274,19 @@ const tokens = {
         sub: '1234567890'
       }
     ) + '-INVALID',
+  edDSAMissingKey: generateToken(
+    {
+      key: readFileSync(`${path.join(__dirname, 'keys')}/private-ed25519.pem`, 'utf8'),
+      noTimestamp: true,
+      iss: 'https://localhost/',
+      kid: 'ANOTHER-KEY'
+    },
+    {
+      admin: true,
+      name: 'John Doe',
+      sub: '1234567890'
+    }
+  ),
 
   unsupportedAlgorithm:
     'eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.nZU_gPcMXkWpkCUpJceSxS7lSickF0tTImHhAR949Z-Nt69LgW8G6lid-mqd9B579tYM8C4FN2jdhR2VRMsjtA',
@@ -1082,6 +1123,108 @@ describe('EdDSA JWT token validation', function () {
     })
   })
 
+  test('should make the complete token information available through request.user', async function (t) {
+    await server.close()
+    server = await buildServer({
+      jwksUrl: 'https://localhost/.well-known/jwks.json',
+      complete: true
+    })
+    const token = tokens.edDSAValid
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${token}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    const body = response.json()
+    t.assert.deepStrictEqual(body.header, {
+      alg: 'EdDSA',
+      kid: 'KEY_EdDSA',
+      typ: 'JWT'
+    })
+    t.assert.deepStrictEqual(body.payload, {
+      sub: '1234567890',
+      name: 'John Doe',
+      admin: true,
+      iss: 'https://localhost/'
+    })
+    t.assert.deepStrictEqual(body.input, token.split('.').slice(0, 2).join('.'))
+    t.assert.ok(body.signature)
+  })
+
+  test('should validate the audience', async function (t) {
+    await server.close()
+    server = await buildServer({
+      jwksUrl: 'https://localhost/.well-known/jwks.json',
+      audience: 'foo'
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.edDSAValidWithAudience}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), {
+      sub: '1234567890',
+      name: 'John Doe',
+      admin: true,
+      iss: 'https://localhost/',
+      aud: 'foo'
+    })
+  })
+
+  test('should validate the audience using the jwksUrl', async function (t) {
+    await server.close()
+    server = await buildServer({
+      jwksUrl: 'https://localhost/.well-known/jwks.json',
+      audience: true,
+      secret: 'secret'
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.edDSAValidWithDomainAsAudience}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), {
+      sub: '1234567890',
+      name: 'John Doe',
+      admin: true,
+      iss: 'https://localhost/',
+      aud: 'https://localhost/'
+    })
+  })
+
+  test('should validate with multiple audiences', async function (t) {
+    await server.close()
+    server = await buildServer({
+      jwksUrl: 'https://localhost/.well-known/jwks.json',
+      audience: ['https://otherhost/', 'foo', 'https://somehost/'],
+      secret: 'secret'
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.edDSAValidWithAudience}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), {
+      sub: '1234567890',
+      name: 'John Doe',
+      admin: true,
+      iss: 'https://localhost/',
+      aud: 'foo'
+    })
+  })
+
   test('should reject an invalid signature', async function (t) {
     const response = await server.inject({
       method: 'GET',
@@ -1096,6 +1239,239 @@ describe('EdDSA JWT token validation', function () {
       error: 'Unauthorized',
       message: 'Authorization token is invalid: The token signature is invalid.'
     })
+  })
+
+  test('should reject an invalid token', async function (t) {
+    const response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.hs256Valid}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
+      statusCode: 401,
+      error: 'Unauthorized',
+      message: 'Unsupported token.'
+    })
+  })
+
+  test('should reject a token when is not possible to retrieve the JWK set due to a HTTP error', async function (t) {
+    nock.cleanAll()
+
+    nock('https://localhost/').get('/.well-known/jwks.json').reply(404, { error: 'Not found.' })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.edDSAValid}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 500)
+    t.assert.deepStrictEqual(response.json(), {
+      statusCode: 500,
+      error: 'Internal Server Error',
+      message: 'Unable to get the JWS due to a HTTP error: [HTTP 404] {"error":"Not found."}'
+    })
+  })
+
+  test("should reject a token when the retrieved JWT set doesn't have the required key", async function (t) {
+    const response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.edDSAMissingKey}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
+      statusCode: 401,
+      error: 'Unauthorized',
+      message: 'Missing Key: Public key must be provided'
+    })
+  })
+
+  test('should reject a token when the retrieved JWT set returns an invalid key', async function (t) {
+    nock.cleanAll()
+
+    nock('https://localhost/')
+      .get('/.well-known/jwks.json')
+      .reply(200, {
+        keys: [
+          {
+            kty: 'OKP',
+            use: 'sig',
+            alg: 'EdDSA',
+            kid: 'KEY_EdDSA',
+            crv: 'Ed25519',
+            x: 'INVALID'
+          }
+        ]
+      })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.edDSAValid}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 500)
+  })
+
+  test('should reject a token when is not possible to retrieve the JWK set due to a generic error', async function (t) {
+    nock.cleanAll()
+    nock.enableNetConnect()
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.edDSAValid}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 500)
+    t.assert.deepStrictEqual(response.json(), {
+      message: 'fetch failed',
+      statusCode: 500,
+      error: 'Internal Server Error'
+    })
+  })
+
+  test('should cache the key and not hit the well-known URL more than once', async function (t) {
+    let response
+
+    response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.edDSAValid}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 200)
+
+    response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.edDSAValid}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 200)
+  })
+
+  test('should correctly get the key again from the well-known URL if cache expired', async function (t) {
+    await server.close()
+    server = await buildServer({
+      jwksUrl: 'https://localhost/.well-known/jwks.json',
+      secret: 'secret',
+      secretsTtl: 10
+    })
+
+    let response
+
+    response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.edDSAValid}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 200)
+
+    await new Promise(resolve => setTimeout(resolve, 20))
+
+    response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.edDSAValid}` }
+    })
+
+    const body = response.json()
+
+    t.assert.deepStrictEqual(response.statusCode, 404)
+    t.assert.deepStrictEqual(body.error, 'Not Found')
+    t.assert.deepStrictEqual(body.statusCode, 404)
+
+    t.assert.match(body.message, /Nock: No match for request/)
+  })
+
+  test('should not cache the key if cache was disabled', async function (t) {
+    await server.close()
+    server = await buildServer({
+      jwksUrl: 'https://localhost/.well-known/jwks.json',
+      secret: 'secret',
+      secretsTtl: 0
+    })
+
+    let response
+
+    response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.edDSAValid}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 200)
+
+    response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.edDSAValid}` }
+    })
+
+    const body = response.json()
+
+    t.assert.deepStrictEqual(response.statusCode, 404)
+    t.assert.deepStrictEqual(body.error, 'Not Found')
+    t.assert.deepStrictEqual(body.statusCode, 404)
+
+    t.assert.match(body.message, /Nock: No match for request/)
+  })
+
+  test('should not try to get the key twice when using caching if a previous attempt failed', async function (t) {
+    let response
+
+    response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.edDSAMissingKey}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
+      statusCode: 401,
+      error: 'Unauthorized',
+      message: 'Missing Key: Public key must be provided'
+    })
+
+    response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.edDSAMissingKey}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 401)
+    t.assert.deepStrictEqual(response.json(), {
+      statusCode: 401,
+      error: 'Unauthorized',
+      message: 'Missing Key: Public key must be provided'
+    })
+  })
+
+  test('should support jwt.verify on fastify instance', async function (t) {
+    const payload = await server.jwt.verify(tokens.edDSAValid)
+    t.assert.deepStrictEqual(payload, {
+      admin: true,
+      iss: 'https://localhost/',
+      name: 'John Doe',
+      sub: '1234567890'
+    })
+  })
+
+  test('should not support signing', async function (t) {
+    const response = await server.inject({
+      method: 'GET',
+      url: '/sign',
+      headers: { Authorization: `Bearer ${tokens.edDSAValid}` }
+    })
+
+    // public / private key pairs aren't supported for signing
+    t.assert.deepStrictEqual(response.statusCode, 500)
   })
 })
 

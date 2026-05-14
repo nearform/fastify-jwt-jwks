@@ -1,6 +1,6 @@
 {
   "name": "fastify-jwt-jwks",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "JWT JWKS verification plugin for Fastify",
   "author": "NearForm Ltd",
   "homepage": "https://github.com/nearform/fastify-jwt-jwks",

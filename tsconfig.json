@@ -5,9 +5,6 @@
     "noEmit": true,
     "strict": true,
     "noImplicitAny": false,
-    "esModuleInterop": true,
-  },
-  "files": [
-    "index.test-d.ts"
-  ]
+    "esModuleInterop": true
+  }
 }

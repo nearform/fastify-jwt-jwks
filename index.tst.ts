@@ -1,6 +1,6 @@
 import Fastify from 'fastify'
 import fastifyJwtJwks from '.'
-import { expectAssignable, expectType } from 'tsd'
+import { expect } from 'tstyche'
 import { DecodePayloadType, FastifyJwtDecodeOptions } from '@fastify/jwt'
 import fastifyJWT from '@fastify/jwt'
 
@@ -44,8 +44,6 @@ fastify.register(fastifyJwtJwks, {
 fastify.register(function (instance, _options, done) {
   instance.get('/verify', {
     handler: function (request, reply) {
-      expectAssignable<Function>(request.jwtDecode)
-
       const options: FastifyJwtDecodeOptions = {
         decode: {
           complete: true
@@ -53,9 +51,9 @@ fastify.register(function (instance, _options, done) {
         verify: {}
       }
 
-      expectType<Promise<DecodePayloadType>>(request.jwtDecode(options))
-      expectType<Promise<DecodePayloadType>>(request.jwtDecode({ decode: { complete: true }, verify: {} }))
-      expectType<Promise<DecodePayloadType>>(request.jwtDecode())
+      expect(request.jwtDecode(options)).type.toBe<Promise<DecodePayloadType>>()
+      expect(request.jwtDecode({ decode: { complete: true }, verify: {} })).type.toBe<Promise<DecodePayloadType>>()
+      expect(request.jwtDecode()).type.toBe<Promise<DecodePayloadType>>()
 
       reply.send(request.user)
     },

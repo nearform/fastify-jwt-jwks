@@ -51,6 +51,8 @@ function verifyOptions(options) {
     jwksUrlOrigin = jwksUrlObject.origin + '/'
 
     verify.algorithms.push('RS256')
+    verify.algorithms.push('EdDSA')
+
     // @TODO normalize issuer url like done for jwksUrl
     verify.allowedIss = issuer || jwksUrlOrigin
 
@@ -157,7 +159,7 @@ function fastifyJwtJwks(instance, options, done) {
       // see https://github.com/fastify/fastify-jwt/issues/388
       getHeader(requestOrToken, verifyFunctionName, decodeFunctionName)
         .then(header => {
-          // If the algorithm is not using RS256, the encryption key is jwt client secret
+          // If the algorithm is not using RS256 or EdDSA, the encryption key is jwt client secret
           if (header.alg.startsWith('HS')) {
             if (!instance[jwksOptionsName].secret) {
               throw new Unauthorized(errorMessages.invalidAlgorithm)
@@ -165,7 +167,7 @@ function fastifyJwtJwks(instance, options, done) {
             return cb(null, instance[jwksOptionsName].secret)
           }
 
-          // If the algorithm is RS256, get the key remotely using a well-known URL containing a JWK set
+          // If the algorithm is RS256 or EdDSA, get the key remotely using a well-known URL containing a JWK set
           getRemoteSecret(instance[jwksOptionsName].jwksUrl, header.alg, header.kid, cache)
             .then(key => cb(null, key))
             .catch(cb)

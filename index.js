@@ -150,6 +150,9 @@ function fastifyJwtJwks(instance, options, done) {
     function getSecret(requestOrToken, reply, cb) {
       if (cb === undefined) {
         cb = reply
+        // normalizes the two-argument signature, the value itself is never read
+        // eslint-disable-next-line no-useless-assignment
+        reply = null
       }
 
       // due to a bug in @fastify/jwt, the getSecret function is called with two different signatures

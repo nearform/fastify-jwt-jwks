@@ -150,7 +150,6 @@ function fastifyJwtJwks(instance, options, done) {
     function getSecret(requestOrToken, reply, cb) {
       if (cb === undefined) {
         cb = reply
-        reply = null
       }
 
       // due to a bug in @fastify/jwt, the getSecret function is called with two different signatures

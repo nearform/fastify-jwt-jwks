@@ -61,6 +61,11 @@ export interface FastifyJwtJwksOptions {
    * to a single Fastify instance. See the description of the namespace parameter in @fastify/jwt.
    */
   readonly namespace?: string
+  /**
+   * The name of the request decorator holding the verified token. Defaults to `user`.
+   * See the description of the decoratorName parameter in @fastify/jwt.
+   */
+  readonly decoratorName?: string
 }
 
 export interface JwtJwks extends Pick<FastifyJwtJwksOptions, 'jwksUrl' | 'audience' | 'secret'> {

@@ -207,6 +207,7 @@ function fastifyJwtJwks(instance, options, done) {
       cookie: options.cookie,
       secret: getSecret,
       formatUser: options.formatUser,
+      decoratorName: options.decoratorName,
       namespace
     })
 

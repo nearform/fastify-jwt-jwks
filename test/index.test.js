@@ -1497,6 +1497,40 @@ describe('Server configured with the namespace option', function () {
   })
 })
 
+describe('Server configured with the decoratorName option', function () {
+  test('decorates the request with the custom decorator name instead of user', async function (t) {
+    const server = await buildServer({ secret: 'secret', decoratorName: 'authenticatedUser' })
+    t.after(() => server.close())
+
+    t.assert.deepStrictEqual(server.hasRequestDecorator('user'), false)
+    t.assert.deepStrictEqual(server.hasRequestDecorator('authenticatedUser'), true)
+  })
+
+  test('makes the token information available through the custom decorator', async function (t) {
+    const server = fastify()
+    t.after(() => server.close())
+
+    await server.register(require('../'), { secret: 'secret', decoratorName: 'authenticatedUser' })
+
+    server.get('/verify', { preValidation: server.authenticate }, (req, reply) => {
+      reply.send(req.authenticatedUser)
+    })
+
+    await server.listen({ port: 0 })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/verify',
+      headers: { Authorization: `Bearer ${tokens.hs256Valid}` }
+    })
+
+    t.assert.deepStrictEqual(response.statusCode, 200)
+    t.assert.deepStrictEqual(response.json(), { sub: '1234567890', name: 'John Doe', admin: true })
+
+    await server.close()
+  })
+})
+
 describe('General error handling', function () {
   let server
 

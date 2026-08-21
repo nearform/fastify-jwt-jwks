@@ -40,6 +40,10 @@ fastify.register(fastifyJwtJwks, {
   audience: '<jwt app audience>',
   formatUser: () => ({ foo: 'bar' })
 })
+fastify.register(fastifyJwtJwks, {
+  secret: '<jwt secret>',
+  decoratorName: '<custom decorator name>'
+})
 
 fastify.register(function (instance, _options, done) {
   instance.get('/verify', {
